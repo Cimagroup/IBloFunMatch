@@ -1,0 +1,16 @@
+# Visual Studio 
+.vs/
+*.sln
+*.vcxproj
+*.filters
+*.user
+
+# Build Files 
+x64/
+env/
+Debug/
+enc_temp_folder/
+
+# Output files and images 
+*.png
+*.out
