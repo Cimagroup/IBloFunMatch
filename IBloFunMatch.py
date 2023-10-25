@@ -1,14 +1,16 @@
 # Functions for computing and plotting the induced block function and matchings 
 from operator import iand
+from re import S, X
 import sys 
 import os
-# from token import NEWLINE 
 import numpy as np
 import scipy.spatial.distance as dist
 import random
 import matplotlib.pyplot as plt
+from matplotlib.patches import ConnectionPatch
+from gudhi import plot_persistence_diagram
 
-def main(perc, data_file):
+def main(exe_file, perc, data_file):
     # Check correct percentage
     assert((perc>=0) and (perc<100)) 
     # Read input point cloud and compute distance matrix 
@@ -28,10 +30,29 @@ def main(perc, data_file):
     Dist_S = dist.squareform(dist.pdist(points[indices_sample]))
     np.savetxt(f_dist_S, Dist_S, fmt="%.18e", delimiter=" ", newline="\n")
     # Compute the matching and block funciton by calling "IBloFunMatch.exe" 
-    os.system("x64\\Debug\\IBloFunMatchCPP.exe " + f_dist_S + " " + f_dist_X + " " + f_ind_sampl + " -d 2")
+    os.system(exe_file + " " + f_dist_S + " " + f_dist_X + " " + f_ind_sampl + " -d 2")
     ##################################################
     # Read data from output folder 
     #################################################
+    # Read barcodes 
+    X_barcode = []
+    with open("output/X_barcode.out") as file:
+        for line in file:
+            rep_list = line.split(" ")
+            X_barcode.append(np.array(rep_list).astype("float").ravel())
+        # end reading bar
+    # end reading file
+    X_barcode = np.array(X_barcode)
+    print("X_barcode")
+    print(X_barcode)
+    S_barcode = []
+    with open("output/S_barcode.out") as file:
+        for line in file:
+            rep_list = line.split(" ")
+            S_barcode.append(list(np.array(rep_list).astype("float")))
+        # end reading bar
+    # end reading file
+    S_barcode = np.array(S_barcode)
     # Read cycle representatives
     S_reps = [];
     with open("output/S_reps.out") as file:
@@ -55,6 +76,7 @@ def main(perc, data_file):
         # end reading reps
     # end reading file
     pm_matrix = [];
+    # Read matrix and matching
     with open("output/pm_matrix.out") as file:
         for line in file:
             col_list = line.split(" ")[:-1]
@@ -70,7 +92,7 @@ def main(perc, data_file):
     print("Induced Matching")
     print(induced_matching)
     ##################################################
-    # Generate cycle plots 
+    # Generate cycle plots illustrating induced matching
     #################################################
     fig, ax = plt.subplots(ncols=3, nrows=len(S_reps), figsize=(15,5*len(S_reps)))
     for idx_cycle, cycle_S in enumerate(S_reps):
@@ -101,10 +123,41 @@ def main(perc, data_file):
         # end while
     # end for
     plt.savefig("plots/cycles_image.png")
+    ##################################################
+    # Persistence Diagrams with Induced Matching
+    #################################################
+    # Plot induced matching between two diagrams
+    max_val = max(np.max(S_barcode), np.max(X_barcode))
+    fig, ax = plt.subplots(ncols=2, nrows=1, figsize=(15,7.5))
+    # S_barcode_ext = np.vstack((S_barcode, np.array([[0,max_val]])))
+    S_barcode_ext = [(1, bar) for bar in S_barcode]+[(2,[0,max_val])]
+    X_barcode_ext = [(1, bar) for bar in X_barcode]+[(2,[0,max_val])]
+    plot_persistence_diagram(S_barcode_ext, axes=ax[0], colormap=["black", "black", "white"])
+    plot_persistence_diagram(X_barcode_ext, axes=ax[1], colormap=["black", "black", "white"])
+    ax[0].get_legend().remove()
+    ax[1].get_legend().remove()
+    ax[0].set_title("1 PH sample")
+    ax[1].set_title("1 PH dataset")
+    for idx, idx_match in enumerate(induced_matching):
+        pt_S = S_barcode[idx]
+        if idx_match==-1:
+            continue
+        pt_X = X_barcode[idx_match]
+        con = ConnectionPatch(
+            xyA=pt_S, coordsA=ax[0].transData, 
+            xyB=pt_X, coordsB=ax[1].transData,
+            arrowstyle="-", connectionstyle='arc',
+            color="red", linewidth=3
+        )
+        fig.add_artist(con)
+    # end for 
+    plt.savefig("plots/ind_matching_PD.png")
+    # Plot induced matching within the same diagram
 # end main 
     
 
 if __name__== "__main__":
-    perc = float(sys.argv[1])
-    data_file = sys.argv[2]
-    main(perc, data_file)
+    exe_file = sys.argv[1]
+    perc = float(sys.argv[2])
+    data_file = sys.argv[3]
+    main(exe_file, perc, data_file)
