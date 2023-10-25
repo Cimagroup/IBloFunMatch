@@ -1,4 +1,5 @@
 # Functions for computing and plotting the induced block function and matchings 
+from operator import iand
 import sys 
 import os
 # from token import NEWLINE 
@@ -60,6 +61,14 @@ def main(perc, data_file):
             pm_matrix.append(list(np.array(col_list).astype("int")))
         # end reading reps
     # end reading file
+    induced_matching = [];
+    with open("output/induced_matching.out") as file:
+        for line in file:
+            induced_matching.append(int(line))
+        # end reading reps
+    # end reading file
+    print("Induced Matching")
+    print(induced_matching)
     ##################################################
     # Generate cycle plots 
     #################################################
@@ -81,17 +90,20 @@ def main(perc, data_file):
         # end while
         # PIVOT CYCLE 
         ax[idx_cycle, 2].scatter(points[:,0], points[:,1], zorder=2, c="navy")
-        if len(pm_matrix[idx_cycle])==0:
+        if induced_matching[idx_cycle]==-1:
             continue
         # Plot pivot cycle 
-        pivot_cycle = X_reps[pm_matrix[idx_cycle][-1]]
+        pivot_cycle = X_reps[induced_matching[idx_cycle]]
         while (len(pivot_cycle)>0):
             edge = points[[pivot_cycle.pop(), pivot_cycle.pop()]]
             ax[idx_cycle, 2].plot(edge[:,0], edge[:,1], c="red", linewidth="5", zorder=1)
-            ax[idx_cycle, 2].set_title(f"Idx: {pm_matrix[idx_cycle][-1]}")
+            ax[idx_cycle, 2].set_title(f"Idx: {induced_matching[idx_cycle]}")
         # end while
     # end for
     plt.savefig("plots/cycles_image.png")
+# end main 
+    
+
 if __name__== "__main__":
     perc = float(sys.argv[1])
     data_file = sys.argv[2]

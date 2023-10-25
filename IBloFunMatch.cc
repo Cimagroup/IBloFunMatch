@@ -242,10 +242,51 @@ int main(int argc, char* argv[]) {
 		out_pm_matrix << std::endl;
 	}
 	out_pm_matrix.close();
+	//----------------------------------------------------------------
 	// COMPUTE INDUCED MATCHING 
-
+	//----------------------------------------------------------------
+	// Prepare matrix to reduce 
+	Phat_boundary_matrix red_pm_matrix;
+	std::cout << "Filling red_pm_matrix" << std::endl;
+	Phat_index start_index = X_barcode[1].size();
+	red_pm_matrix.set_num_cols(start_index + pm_matrix[1].size());
+	for (Phat_index col_idx = 0; col_idx < pm_matrix[1].size(); col_idx++) {
+		red_pm_matrix.set_col(start_index + col_idx, pm_matrix[1][col_idx]);
+	}
+	std::cout << "Filled, printing: " << std::endl;
+	for (Phat_index col_idx = start_index; col_idx < red_pm_matrix.get_num_cols(); col_idx++) {
+		std::vector<Phat_index> column;
+		red_pm_matrix.get_col(col_idx, column);
+		std::cout << col_idx << " : ";
+		for (Phat_index entry : column) {
+			std::cout << entry << " ";
+		}
+		std::cout << std::endl;
+	}
+	std::cout << "Now going to reduce" << std::endl;
+	// Reduce matrix using PHAT
+	phat::persistence_pairs irrelevant_pairs;
+	// compute persistent homology by means of the standard reduction
+	phat::compute_persistence_pairs<phat::standard_reduction>(irrelevant_pairs, red_pm_matrix);
+	// Read column pivots and store into matching 
+	std::cout << "Reduced" << std::endl;
+	// Value of -1 means that there is no matching 
+	std::vector<Phat_index> induced_matching(pm_matrix[1].size(), -1);
+	for (Phat_index col_idx = start_index; col_idx < red_pm_matrix.get_num_cols(); col_idx++) {
+		std::vector<Phat_index> column;
+		red_pm_matrix.get_col(col_idx, column);
+		if (column.size() > 0) {
+			induced_matching[col_idx-start_index] = column.back();
+		}
+	}
+	// Store induced matching into file 
+	std::ofstream out_ind_match("output/induced_matching.out");
+	for (Phat_index idx_match : induced_matching) {
+		out_ind_match << idx_match << std::endl;
+	}
+	out_ind_match.close();
 	return 0;
-}
+} // End main
 
 void sort_startpoint(
 	std::vector<Interval>& barcode_1,
