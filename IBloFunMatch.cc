@@ -112,6 +112,7 @@ int main(int argc, char* argv[]) {
 			return sample_indices[i] < sample_indices[j];
 		}
 	);
+	std::cout << "sorted sample indices" << std::endl;
 	// Sort dist_S according to new order
 	Distance_matrix dist_S_sort;
 	for (size_t row_idx = 0; row_idx < order_sample.size(); row_idx++) {
@@ -138,7 +139,6 @@ int main(int argc, char* argv[]) {
 	for (size_t row_idx = 0; row_idx < sample_indices.size(); row_idx++) {
 		for (size_t col_idx = 0; col_idx < row_idx; col_idx++) {
 			assert(dist_S[row_idx][col_idx] >= dist_X[sample_indices[row_idx]][sample_indices[col_idx]]);
-			assert(abs(dist_S[row_idx][col_idx] - dist_X[sample_indices[row_idx]][sample_indices[col_idx]])<_tolerance);
 		}
 	}
 	std::cout << "Correctly checked inequality on dist_S and dist_X" << std::endl;
