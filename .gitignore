@@ -6,10 +6,15 @@
 *.user
 
 # Build Files 
-x64/
-env/
-Debug/
-enc_temp_folder/
+x64
+env
+Debug
+enc_temp_folder
+build/*
+*.exe 
+*.json
+__pycache__
+out
 
 # Output files and images 
 *.png
@@ -17,3 +22,6 @@ enc_temp_folder/
 
 # Notebook files 
 .ipynb_checkpoints
+
+# Do not copy external repositories 
+ext/*
