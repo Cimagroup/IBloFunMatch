@@ -1,23 +1,43 @@
 Welcome to Induced Block Funtions and Matchings (IBloFunMatch)!!!
 
 Installation instructions:
---------------------------
+==========================
+Basic Requirements
+------------------
 - Have a C++ compiler installed (e.g. GNU compiler)
 - Have Python installed with numpy, matplotlib,...
 - Make sure you have already installed:
-CGAL, GUDHI (and their dependencies:mpfr, gmp and boost)
-- Maker sure that "gudhi" and "cgal" are in your compiler include path
-- Download the PHAT copy from the branch "pm_matrix"
-- Make sure that the "phat" folder within "{PHAT copy path}/include" is in your C++ compiler include path
-- Download the "PerMoVEC" bitbucket repository
-- Take the "Flag_complex_edge_collapser.h" file and substitute the original file on the gudhi repository 
-- (on the previous step you might want to call the older file "Flag_complex_edge_collapser_old.h" to keep it)
-- Make sure the "permovec.h" file is in your compiler include path
+  CGAL, mpfr, gmp and boost
 
-Now we are ready! 
+Add local copies of header files from PerMoVec and GUDHI
+--------------------------------------------------------
+- Download the "PerMoVEC" bitbucket repository inside the "ext" folder of "IBloFunMatch"
+- Clone the GUDHI repository "https://github.com/GUDHI/gudhi-devel" somewhere in your computer. (*)
+- Take the "Flag_complex_edge_collapser.h" file from the "PerMoVec" folder and substitute the original file 	
+  from (*) located at "include/gudhi/Flag_complex_edge_collapser.h"
+- Take the "include/gudhi" folder from (*) and copy it inside the "ext" folder with the name "gudhi"
+	
 
-- Compile "IBloFunMatch.cc" and produce the ".exe" file (e.g. IBloFunMatch.exe)
-- If you execute the ".exe" file with the -h flag you will get a menu detailing the program.
-- You can also execute the python script "IBloFunMatch.py" which reads a data file and plots the matching as follows:
-	python IBloFunMatch.py {path to .exe file} {sample percentage (from 0 to 1)} {path to data points} 
-	(e.g. python IBloFunMatch.py IBloFunMatch.exe 0.4 samples/dino_data.txt)
+Add a copy of PHAT with preimage support 
+----------------------------------------
+- Clone the PHAT repository branch "pm_matrix" (BRANCH NAME IMPORTANT) somewhere in your computer
+- take the "include/phat" folder and copy it inside the "ext" folder from IBloFunMatch with the name "phat"
+
+
+Build IBloFunMatch
+------------------
+
+- Compile "IBloFunMatch.cc" using CMake:
+	$ mkdir build
+	$ cd build 
+	$ cmake ..
+	$ cmake --build .
+
+- Inside the build directory there is an executable "IBloFunMatch" which now can be run from the Notebooks and the terminal.
+- For example (inside the build directory), executing 
+    $ ./IBloFunMatch -h 
+  will print the help menu of the program.
+
+- (! Not working now) You can also execute the python script "IBloFunMatch.py" which reads a data file and plots the matching as follows:
+	python IBloFunMatch.py {path to executable file} {sample percentage (from 0 to 1)} {path to data points} 
+	(e.g. python IBloFunMatch.py build/IBloFunMatch.exe 0.4 samples/dino_data.txt)
