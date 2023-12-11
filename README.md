@@ -28,14 +28,17 @@ Build IBloFunMatch
 ------------------
 
 - Compile "IBloFunMatch.cc" using CMake:
-	$ mkdir build
-	$ cd build 
-	$ cmake ..
-	$ cmake --build .
-
+```sh
+	mkdir build
+	cd build 
+	cmake ..
+	cmake --build .
+```
 - Inside the build directory there is an executable "IBloFunMatch" which now can be run from the Notebooks and the terminal.
 - For example (inside the build directory), executing 
-    $ ./IBloFunMatch -h 
+```sh
+	./IBloFunMatch -h 
+```
   will print the help menu of the program.
 
 - (! Not working now) You can also execute the python script "IBloFunMatch.py" which reads a data file and plots the matching as follows:
