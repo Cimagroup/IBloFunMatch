@@ -6,6 +6,6 @@ add_executable(IBloFunMatch IBloFunMatch.cc)
 
 target_include_directories(IBloFunMatch PRIVATE "ext/")
 
-find_package(Boost REQUIRED COMPONENTS program_options)
+find_package(Boost COMPONENTS program_options REQUIRED)
 
 target_link_libraries(IBloFunMatch PRIVATE Boost::program_options)

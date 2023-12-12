@@ -250,6 +250,36 @@ int main(int argc, char* argv[]) {
 		out_pm_matrix << std::endl;
 	}
 	out_pm_matrix.close();
+	// Print out 0 dimensional barcode and representatives from set and subset
+	std::ofstream out_X_barcode_0("output/X_barcode_0.out");
+	for (Interval bar : X_barcode[0]) {
+		out_X_barcode_0 << bar.first << " " << bar.second << std::endl;
+	}
+	out_X_barcode_0.close();
+
+	std::ofstream out_X_reps_0("output/X_reps_0.out");
+	for (Phat_column rep : std::get<0>(X_reps)) {
+		for (Phat_index entry : rep) {
+			out_X_reps_0 << entry << " ";
+		}
+		out_X_reps_0 << std::endl;
+	}
+	out_X_reps_0.close();
+
+	std::ofstream out_S_barcode_0("output/S_barcode_0.out");
+	for (Interval bar : S_barcode[0]) {
+		out_S_barcode_0 << bar.first << " " << bar.second << std::endl;
+	}
+	out_S_barcode_0.close();
+
+	std::ofstream out_S_reps_0("output/S_reps_0.out");
+	for (Phat_column rep_0 : std::get<0>(S_reps)) {
+		for (Phat_index entry : rep_0) {
+			out_S_reps_0 << entry << " ";
+		}
+		out_S_reps_0 << std::endl;
+	}
+	out_S_reps_0.close();
 	//----------------------------------------------------------------
 	// COMPUTE INDUCED MATCHING 
 	//----------------------------------------------------------------
@@ -273,9 +303,9 @@ int main(int argc, char* argv[]) {
 	}
 	std::cout << "Now going to reduce" << std::endl;
 	// Reduce matrix using PHAT
-	phat::persistence_pairs irrelevant_pairs;
+	phat::persistence_pairs _pairs;
 	// compute persistent homology by means of the standard reduction
-	phat::compute_persistence_pairs<phat::standard_reduction>(irrelevant_pairs, red_pm_matrix);
+	phat::compute_persistence_pairs<phat::standard_reduction>(_pairs, red_pm_matrix);
 	// Read column pivots and store into matching 
 	std::cout << "Reduced" << std::endl;
 	// Value of -1 means that there is no matching 
@@ -293,6 +323,8 @@ int main(int argc, char* argv[]) {
 		out_ind_match << idx_match << std::endl;
 	}
 	out_ind_match.close();
+
+	
 	// ---------------------------------------------------------------------------------//
 	// Compute Matching Strength 
 	// ---------------------------------------------------------------------------------//
@@ -330,7 +362,7 @@ int main(int argc, char* argv[]) {
 				}
 			}
 		}
-		// If there are no related intervals in X, take image overlap as min_comp_S
+		// If there are no related intervals in S, take image overlap as min_comp_S
 		double min_comp_S = 0;
 		if (related_intervals.size()==0) {
 			min_comp_S = im_len;
@@ -431,16 +463,6 @@ int main(int argc, char* argv[]) {
 	}
 	out_match_strength << std::endl;
 	out_match_strength.close();
-	// Print zero dimensional barcodes and reps 
-	/*idx_S = 0;
-	for (Interval bar : S_barcode[0]) {
-		std::cout << "[" << bar.first << " " << bar.second << ") - ";
-		for (Phat_index entry : std::get<0>(S_reps)[idx_S]) {
-			std::cout << entry << " ";
-		}
-		std::cout << std::endl;
-		idx_S++;
-	}*/
 	// Now compute other quantities 
 	return 0;
 } // End main
@@ -536,7 +558,8 @@ void merge_distances(
 {
 	// Initialize a matrix to compute when two components merge after they die
 	Phat_boundary_matrix vertex_pairs_matrix;
-	vertex_pairs_matrix.set_num_cols(num_vertices + dimBarcode[0].size() + dimBarcode[1].size());
+	// Columns correspond to vertices, 0-dim PH classes and possible related intervals
+	vertex_pairs_matrix.set_num_cols(num_vertices + dimBarcode[0].size() + related_intervals.size());
 	// Set first num_vertices columns to dimension 0 (needed for PHAT)
 	Phat_index col_idx = 0;
 	while (col_idx < num_vertices) {
@@ -544,47 +567,92 @@ void merge_distances(
 		col_idx++;
 	}
 	// Set first dimension of other columns 
-	while (col_idx < num_vertices + dimBarcode[0].size() + dimBarcode[1].size()) {
+	while (col_idx < num_vertices + dimBarcode[0].size() + related_intervals.size()) {
 		vertex_pairs_matrix.set_dim(col_idx, 1);
 		col_idx++;
 	}
 	col_idx = num_vertices;
 	// Fill boundary matrix with zero PH representatives from S
+	std::cout << "zero reps" << std::endl;
 	for (Phat_column zero_rep : std::get<0>(dimReps)) {
 		vertex_pairs_matrix.set_col(col_idx, zero_rep);
+		for (Phat_index entry : zero_rep) {
+			std::cout << entry << " ";
+		}
+		std::cout << std::endl;
 		col_idx++;
 	}
 	Phat_index start_index = num_vertices + dimBarcode[0].size(); // Column index where to start from
 	Phat_index bar_vertex = std::get<1>(dimReps)[bar_idx][0].first; // Just get one vertex from the representative of bar_idx
-	for (Phat_index i : related_intervals) {
+	for (Phat_index rint_count = 0; rint_count < related_intervals.size(); rint_count++) {
+		Phat_index i = related_intervals[rint_count];
 		if (i == bar_idx) {
+			std::cout << "Same index interval error" << std::endl;
 			exit(1); // This should not happen
 		}
 		Phat_index vertex_i = std::get<1>(dimReps)[i][0].first;
-		vertex_pairs_matrix.set_col(start_index + i, { std::min(vertex_i, bar_vertex), std::max(vertex_i, bar_vertex) });
+		if (vertex_i != bar_vertex) {
+			vertex_pairs_matrix.set_col(start_index + rint_count, { std::min(vertex_i, bar_vertex), std::max(vertex_i, bar_vertex) });
+		}
 	}
 	// Fill boundary matrix with zero representatives from S and point pairs from S and reduce
 	// The result leads to the coefficients R_ij
 	phat::persistence_pairs _pairs;
-	phat::compute_persistence_pairs<phat::standard_reduction>(_pairs, vertex_pairs_matrix);
-	// Obtain merging distances 
-	for (Phat_index j_bar = 0; j_bar < dimBarcode[1].size(); j_bar++) {
-		if (std::find(related_intervals.begin(), related_intervals.end(), j_bar) == related_intervals.end()) {
-			continue;
+	std::cout << "Going to PHAT reduce the matrix:" << std::endl;
+	for (Phat_index j = 0; j < vertex_pairs_matrix.get_num_cols(); j++) {
+		Phat_column column;
+		vertex_pairs_matrix.get_col(j, column);
+		for (Phat_index entry : column) {
+			std::cout << entry << " ";
 		}
+		std::cout << std::endl;
+	}
+	phat::compute_persistence_pairs<phat::standard_reduction>(_pairs, vertex_pairs_matrix);
+	std::cout << "phat reduction done, Result" << std::endl;
+	for (Phat_index j = 0; j < vertex_pairs_matrix.get_num_cols(); j++) {
+		Phat_column column;
+		vertex_pairs_matrix.get_col(j, column);
+		for (Phat_index entry : column) {
+			std::cout << entry << " ";
+		}
+		std::cout << std::endl;
+	}
+	std::cout << "num_vertices : " << num_vertices << std::endl;
+	std::cout << "dim 0 barcode: " << dimBarcode[0].size() << std::endl;
+	std::cout << "related_intervals.size(): " << related_intervals.size() << std::endl;
+	// Obtain merging distances 
+	for (Phat_index rint_count = 0; rint_count < related_intervals.size(); rint_count++) {
+		Phat_index j_bar = related_intervals[rint_count];
+		std::cout << j_bar << " col: ";
+		Phat_column reduced_col;
+		vertex_pairs_matrix.get_col(start_index + rint_count, reduced_col);
+		for (Phat_index entry : reduced_col) {
+			std::cout << entry << " ";
+		}
+		std::cout << ") p(";
 		Phat_column preim_col;
-		vertex_pairs_matrix.get_preimage(start_index + j_bar, preim_col);
+		vertex_pairs_matrix.get_preimage(start_index + rint_count, preim_col);
+		for (int i = 0; i < preim_col.size(); i++) {
+			std::cout << preim_col[i] - num_vertices << " ";
+		}
+		std::cout << ") sorted (";
+		// sort preimage 
+		std::sort(preim_col.begin(), preim_col.end());
+		for (int i = 0; i < preim_col.size(); i++) {
+			std::cout << preim_col[i] - num_vertices << " ";
+		}
+		std::cout << std::endl;
 		// Get maximum death of both cycles
 		double merge_val = 0;
 		// Last entry of preimage_col is the index of the column, which we skip
-		for (int i = 0; i < preim_col.size() - 1; i++) {
+		for (int i = 0; i < preim_col.size()-1; i++) {
+			std::cout << preim_col[i] -num_vertices<< " ";
 			// First num_vertices columns are empty, barcode 0 counter starts at num_vertices
 			merge_val = std::max(merge_val, dimBarcode[0][preim_col[i] - num_vertices].second);
 		}
-		double death_min = std::min(dimBarcode[1][bar_idx].second, dimBarcode[1][j_bar].second);
-		//std::cout << "death_min: " << death_min << ", merged at: " << merge_val << std::endl;
-		// Get first entry (recall that dimBarcode[0] is sorted in standard endpoint
-		double merge_dist = std::max(0.0, merge_val - death_min);
+		std::cout <<  std::endl;
+		double death_max = std::max(dimBarcode[1][bar_idx].second, dimBarcode[1][j_bar].second);
+		double merge_dist = std::max(0.0, merge_val - death_max);
 		merge_values.push_back(merge_dist);
 	}
 } // end of merge_distances

@@ -91,9 +91,9 @@ def main(exe_file, perc, data_file):
     # end reading file
     print("Induced Matching")
     print(induced_matching)
-    ##################################################
+    ####################################################
     # Generate cycle plots illustrating induced matching
-    #################################################
+    ####################################################
     fig, ax = plt.subplots(ncols=3, nrows=len(S_reps), figsize=(15,5*len(S_reps)))
     for idx_cycle, cycle_S in enumerate(S_reps):
         # CYCLE
