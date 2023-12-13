@@ -100,13 +100,10 @@ int main(int argc, char* argv[]) {
 		sample_indices.push_back(idx_S);
 	}
 	// Read Distance Matrices 
+	std::cout << "Reading distance Matrices." << std::endl;
 	Distance_matrix dist_S = Gudhi::read_lower_triangular_matrix_from_csv_file<Filtration_value>(file_S_dist, ' ');
 	Distance_matrix dist_X = Gudhi::read_lower_triangular_matrix_from_csv_file<Filtration_value>(file_X_dist, ' ');
-	std::cout << "sample_indices (" << sample_indices.size() << "): ";
-	for (size_t idx : sample_indices) {
-		std::cout << idx << ", ";
-	}
-	std::cout << std::endl;
+	std::cout << "Finished reading matrices and sample indices." << std::endl;
 	// SORT indices of subset and dist S 
 	std::vector<size_t> order_sample;
 	for (size_t idx = 0; idx < sample_indices.size(); idx++) {
@@ -149,11 +146,6 @@ int main(int argc, char* argv[]) {
 		}
 	}
 	std::cout << "Correctly checked inequality on dist_S and dist_X" << std::endl;
-	std::cout << "Sample indices (sorted)" << std::endl;
-	for (size_t idx : sample_indices) {
-		std::cout << idx << ", ";
-	}
-	std::cout << std::endl;
 	// ------------------------------------------------------------------------
 	// Call PerMoVEC and initialize variables
 	// ------------------------------------------------------------------------
@@ -599,7 +591,7 @@ void merge_distances(
 	// The result leads to the coefficients R_ij
 	phat::persistence_pairs _pairs;
 	std::cout << "Going to PHAT reduce the matrix:" << std::endl;
-	for (Phat_index j = 0; j < vertex_pairs_matrix.get_num_cols(); j++) {
+	for (Phat_index j = num_vertices; j < vertex_pairs_matrix.get_num_cols(); j++) {
 		Phat_column column;
 		vertex_pairs_matrix.get_col(j, column);
 		for (Phat_index entry : column) {
@@ -609,7 +601,7 @@ void merge_distances(
 	}
 	phat::compute_persistence_pairs<phat::standard_reduction>(_pairs, vertex_pairs_matrix);
 	std::cout << "phat reduction done, Result" << std::endl;
-	for (Phat_index j = 0; j < vertex_pairs_matrix.get_num_cols(); j++) {
+	for (Phat_index j = num_vertices; j < vertex_pairs_matrix.get_num_cols(); j++) {
 		Phat_column column;
 		vertex_pairs_matrix.get_col(j, column);
 		for (Phat_index entry : column) {

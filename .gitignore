@@ -25,3 +25,10 @@ out
 
 # Do not copy external repositories 
 ext/*
+
+# Do not copy MNIST data 
+Notebooks/MNIST_data/test.csv
+Notebooks/MNIST_data/train.csv
+
+# Ignore executable file path 
+exe_path.txt

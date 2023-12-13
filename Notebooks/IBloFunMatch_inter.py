@@ -2,13 +2,16 @@ import os
 import numpy as np
 import matplotlib as mpl
 
-EXECUTABLE_PATH = f"../build/IBloFunMatch" # this is my particular path (Linux)
-# EXECUTABLE_PATH = f"..\\out\\build\\x64-Debug\\IBloFunMatch.exe" # this is my particular path (MW Visual Studio)
+# Read executable path from cmake-generated file 
+with open("../exe_path.txt") as f:
+    EXECUTABLE_PATH = f.readline()
+
+print(f"EXECUTABLE_PATH: {EXECUTABLE_PATH}")
 
 attributes = ["X_barcode", "S_barcode", "X_reps", "S_reps", "S_reps_im", "pm_matrix", "induced_matching", "matching_strengths"]
 types_list = ["float", "float", "int", "int", "int", "int", "int", "float"]
 
-def get_IBloFunMatch_subset(Dist_S, Dist_X, idS, output_dir):
+def get_IBloFunMatch_subset(Dist_S, Dist_X, idS, output_dir, max_rad=-1, num_it=1):
     # Buffer files to write subsets and classes for communicating with C++ program 
     f_ind_sampl = output_dir + "indices_sample.out"
     f_dist_X = output_dir + "dist_X.out"
@@ -19,11 +22,19 @@ def get_IBloFunMatch_subset(Dist_S, Dist_X, idS, output_dir):
     np.savetxt(f_dist_X, Dist_X, fmt="%.14e", delimiter=" ", newline="\n")
     np.savetxt(f_dist_S, Dist_S, fmt="%.14e", delimiter=" ", newline="\n")
     # Call IBloFunMatch C++ program (only for dimension 1 PH)
-    os.system(EXECUTABLE_PATH + " " + f_dist_S + " " + f_dist_X + " " + f_ind_sampl + " -d 2")
+    extra_flags = ""
+    if max_rad!=-1:
+        extra_flags += " -r " + f"{max_rad:f}" + " "
+    # added maximum radius flag
+    if(num_it>1):
+        extra_flags += " -i " + f"{num_it:d}" + " "
+    # added number of collapses iteration flag
+
+    os.system(EXECUTABLE_PATH + " " + f_dist_S + " " + f_dist_X + " " + f_ind_sampl + " -d 2 " + extra_flags )
     # Save barcodes and representatives reading them from output files
     data_read = []
     for attribute_name, typename in zip(attributes, types_list):
-        with open(output_dir + attribute_name + ".out") as file:
+        with open(output_dir + "/" + attribute_name + ".out") as file:
             for line in file:
                 if(attribute_name=="matching_strengths"):
                     data_line = line.split(" ")[:-1]
@@ -50,7 +61,7 @@ def get_IBloFunMatch_subset(Dist_S, Dist_X, idS, output_dir):
     return output_data
 # def get_IBloFunMatch_subset
 
-def plot_matching(IBloFunMatch_o, output_dir, ax, fig):
+def plot_matching(IBloFunMatch_o, output_dir, ax, fig, max_rad=-1):
     X_barcode = IBloFunMatch_o["X_barcode"]
     S_barcode = IBloFunMatch_o["S_barcode"]
     X_reps = IBloFunMatch_o["X_reps"]
@@ -61,13 +72,25 @@ def plot_matching(IBloFunMatch_o, output_dir, ax, fig):
 
     lw_S, lw_X = 100/len(S_barcode), 100/len(X_barcode)
     for idx, bar in enumerate(S_barcode):
-        ax[0].plot([bar[0], bar[1]], [idx, idx], c="orange", linewidth=lw_S, zorder=1)
+        # ax[0].plot([bar[0], bar[1]], [idx, idx], c="orange", linewidth=lw_S, zorder=1)
+        ax[0].add_patch(mpl.patches.Rectangle([bar[0], idx-0.2], (bar[1]-bar[0]), 0.4, color="orange", zorder=1))
     for idx, bar in enumerate(X_barcode):
-        ax[1].plot([bar[0], bar[1]], [idx, idx], c="aquamarine", linewidth=lw_X, zorder=1)
+        # ax[1].plot([bar[0], bar[1]], [idx, idx], c="aquamarine", linewidth=lw_X, zorder=1)
+        ax[1].add_patch(mpl.patches.Rectangle([bar[0], idx-0.2], (bar[1]-bar[0]), 0.4, color="aquamarine", zorder=1))
 
     for ax_it in ax:
         ax_it.set_frame_on(False)
         ax_it.set_yticks([])
+
+    # Limits barcode diagrams on y axis
+    ax[0].set_ylim([-1, S_barcode.shape[0]])
+    ax[1].set_ylim([-1, X_barcode.shape[0]])
+    # Limits on x axis depend on value where filtration is "cut"
+    MAX_PLOT_RAD = np.max(X_barcode)*1.1
+    if max_rad>=0:
+        MAX_PLOT_RAD = max_rad
+    ax[0].set_xlim([0, MAX_PLOT_RAD])
+    ax[1].set_xlim([0, MAX_PLOT_RAD])
 
     # Plot Partial Matching
     for idx, idx_match in enumerate(induced_matching):
@@ -80,8 +103,10 @@ def plot_matching(IBloFunMatch_o, output_dir, ax, fig):
             continue
         print(f"{S_bar} <--> {X_bar}, strength: {strength:.3f}")
         # Highlight matched bar sections 
-        ax[0].plot([S_bar[0], X_bar[1]], [idx, idx], c="navy", linewidth=lw_S, zorder=2, alpha=0.5)
-        ax[1].plot([S_bar[0], X_bar[1]], [idx_match, idx_match], c="navy", linewidth=lw_X, zorder=2, alpha=0.5)
+        # ax[0].plot([S_bar[0], X_bar[1]], [idx, idx], c="navy", linewidth=lw_S, zorder=2, alpha=0.5)
+        ax[0].add_patch(mpl.patches.Rectangle([S_bar[0], idx-0.2], (X_bar[1]-S_bar[0]), 0.4, color="navy", zorder=2))
+        # ax[1].plot([S_bar[0], X_bar[1]], [idx_match, idx_match], c="navy", linewidth=lw_X, zorder=2, alpha=0.5)
+        ax[1].add_patch(mpl.patches.Rectangle([S_bar[0], idx_match-0.2], (X_bar[1]-S_bar[0]), 0.4, color="navy", zorder=2))
         # Plot matchings
         pt_S = [S_bar[1], idx]
         pt_X = [X_bar[0], idx_match]

@@ -41,6 +41,8 @@ Build IBloFunMatch
 ```
   will print the help menu of the program.
 
-- (! Not working now) You can also execute the python script "IBloFunMatch.py" which reads a data file and plots the matching as follows:
+- You can now run the jupyter notebooks inside the "Notebooks" folder. 
+
+- (! Not working ATM) You can also execute the python script "IBloFunMatch.py" which reads a data file and plots the matching as follows:
 	python IBloFunMatch.py {path to executable file} {sample percentage (from 0 to 1)} {path to data points} 
 	(e.g. python IBloFunMatch.py build/IBloFunMatch.exe 0.4 samples/dino_data.txt)
