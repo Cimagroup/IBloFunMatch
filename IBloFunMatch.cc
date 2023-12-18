@@ -116,7 +116,7 @@ int main(int argc, char* argv[]) {
 			return sample_indices[i] < sample_indices[j];
 		}
 	);
-	std::cout << "sorted sample indices" << std::endl;
+	std::cout << "sorted sample indices, total: " << sample_indices.size()  << std::endl;
 	// Sort dist_S according to new order
 	Distance_matrix dist_S_sort;
 	for (size_t row_idx = 0; row_idx < order_sample.size(); row_idx++) {
@@ -132,6 +132,7 @@ int main(int argc, char* argv[]) {
 		}
 		dist_S_sort.push_back(row);
 	}
+	std::cout << "sorted S according to new order" << std::endl;
 	// Store new reordering 
 	std::vector<size_t> sample_indices_sort;
 	for (size_t idx : order_sample) {
@@ -139,6 +140,7 @@ int main(int argc, char* argv[]) {
 	}
 	sample_indices = sample_indices_sort;
 	dist_S = dist_S_sort;
+	std::cout << "stored new sorted distance matrix" << std::endl;
 	// Check that distances from S are greater than those from X 
 	for (size_t row_idx = 0; row_idx < sample_indices.size(); row_idx++) {
 		for (size_t col_idx = 0; col_idx < row_idx; col_idx++) {
@@ -188,6 +190,7 @@ int main(int argc, char* argv[]) {
 		X_barcode, X_reps,
 		pm_matrix
 	);
+
 	// ---------------------------------------------------------------------------
 	// Use the PerMoVEC output to compute IBloFunMatch 
 	// ---------------------------------------------------------------------------
@@ -456,6 +459,9 @@ int main(int argc, char* argv[]) {
 	out_match_strength << std::endl;
 	out_match_strength.close();
 	// Now compute other quantities 
+	// -------------------------------------------------------------------------------//
+	// Matching in 0 dimension
+	// -------------------------------------------------------------------------------//
 	return 0;
 } // End main
 

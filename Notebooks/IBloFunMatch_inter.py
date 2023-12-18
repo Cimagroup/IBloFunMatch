@@ -13,9 +13,9 @@ types_list = ["float", "float", "int", "int", "int", "int", "int", "float"]
 
 def get_IBloFunMatch_subset(Dist_S, Dist_X, idS, output_dir, max_rad=-1, num_it=1):
     # Buffer files to write subsets and classes for communicating with C++ program 
-    f_ind_sampl = output_dir + "indices_sample.out"
-    f_dist_X = output_dir + "dist_X.out"
-    f_dist_S = output_dir + "dist_S.out"
+    f_ind_sampl = output_dir + "/" + "indices_sample.out"
+    f_dist_X = output_dir + "/" + "dist_X.out"
+    f_dist_S = output_dir + "/" + "dist_S.out"
     output_data = {}
     # Compute distance matrices and save
     np.savetxt(f_ind_sampl, idS, fmt="%d", delimiter=" ", newline="\n")
@@ -61,7 +61,7 @@ def get_IBloFunMatch_subset(Dist_S, Dist_X, idS, output_dir, max_rad=-1, num_it=
     return output_data
 # def get_IBloFunMatch_subset
 
-def plot_matching(IBloFunMatch_o, output_dir, ax, fig, max_rad=-1):
+def plot_matching(IBloFunMatch_o, output_dir, ax, fig, max_rad=-1, colorbars=["orange", "aquamarine"], frame_on=False, print_matching=False):
     X_barcode = IBloFunMatch_o["X_barcode"]
     S_barcode = IBloFunMatch_o["S_barcode"]
     X_reps = IBloFunMatch_o["X_reps"]
@@ -73,13 +73,13 @@ def plot_matching(IBloFunMatch_o, output_dir, ax, fig, max_rad=-1):
     lw_S, lw_X = 100/len(S_barcode), 100/len(X_barcode)
     for idx, bar in enumerate(S_barcode):
         # ax[0].plot([bar[0], bar[1]], [idx, idx], c="orange", linewidth=lw_S, zorder=1)
-        ax[0].add_patch(mpl.patches.Rectangle([bar[0], idx-0.2], (bar[1]-bar[0]), 0.4, color="orange", zorder=1))
+        ax[0].add_patch(mpl.patches.Rectangle([bar[0], idx-0.2], (bar[1]-bar[0]), 0.4, color=colorbars[0], zorder=1))
     for idx, bar in enumerate(X_barcode):
         # ax[1].plot([bar[0], bar[1]], [idx, idx], c="aquamarine", linewidth=lw_X, zorder=1)
-        ax[1].add_patch(mpl.patches.Rectangle([bar[0], idx-0.2], (bar[1]-bar[0]), 0.4, color="aquamarine", zorder=1))
+        ax[1].add_patch(mpl.patches.Rectangle([bar[0], idx-0.2], (bar[1]-bar[0]), 0.4, color=colorbars[1], zorder=1))
 
     for ax_it in ax:
-        ax_it.set_frame_on(False)
+        ax_it.set_frame_on(frame_on)
         ax_it.set_yticks([])
 
     # Limits barcode diagrams on y axis
@@ -101,7 +101,8 @@ def plot_matching(IBloFunMatch_o, output_dir, ax, fig, max_rad=-1):
         strength = matching_strengths[idx]
         if X_bar[1]<S_bar[0]:
             continue
-        print(f"{S_bar} <--> {X_bar}, strength: {strength:.3f}")
+        if print_matching:
+            print(f"{S_bar} <--> {X_bar}, strength: {strength:.3f}")
         # Highlight matched bar sections 
         # ax[0].plot([S_bar[0], X_bar[1]], [idx, idx], c="navy", linewidth=lw_S, zorder=2, alpha=0.5)
         ax[0].add_patch(mpl.patches.Rectangle([S_bar[0], idx-0.2], (X_bar[1]-S_bar[0]), 0.4, color="navy", zorder=2))
