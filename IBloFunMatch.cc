@@ -26,6 +26,8 @@
 
 #include "permovec/permovec.h"
 
+#include "sorting.hh"
+
 
 // GUDHI types
 using Simplex_tree_options = Gudhi::Simplex_tree_options_full_featured;
@@ -49,28 +51,16 @@ using Phat_idx_pair = std::pair<Phat_index, Phat_index>;
 // Custom Relevant Types
 using Interval = std::pair<Filtration_value, Filtration_value>;
 using Barcodes_dim = std::unordered_map<int, std::vector<Interval>>;
-using Cycle_rep = std::vector<Vertex_pair>;
 using Matrix_dim = std::unordered_map<int, std::vector<std::vector<Phat_index>>>;
 using Distance_matrix = std::vector<std::vector<Filtration_value>>;
+
 
 void program_options(
 	int argc, char* argv[], std::string& file_S_dist, std::string& file_X_dist, std::string& file_sample_indices,
 	Filtration_value& threshold, int& dim_max, int& edge_collapse_iter_nb
 );
 
-void sort_startpoint(
-	std::vector<Interval>& barcode_1,
-	std::vector<Cycle_rep_1>& cycles_1,
-	std::vector<Cycle_rep_1>& cycles_1_im,
-	std::vector<std::vector<Phat_index>>& pm_matrix_1
-);
-
-void sort_endpoint(
-	std::vector<Interval>& barcode_1,
-	std::vector<Cycle_rep_1>& cycles_1,
-	std::vector<std::vector<Phat_index>>& pm_matrix_1
-);
-
+// Function to compute merge distances of classes
 void merge_distances(
 	Phat_index bar_idx, std::vector<Phat_index>& related_intervals, Phat_index num_vertices,
 	Barcodes_dim& dimBarcode,
@@ -80,7 +70,7 @@ void merge_distances(
 
 int main(int argc, char* argv[]) {
 	// ------------------------------------------------------------------------
-	// READ DATA and sort subset 
+	// READ DATA distance matrices and options
 	// ------------------------------------------------------------------------
 	// Read arguments and distance matrix locations
 	std::string file_S_dist, file_X_dist, file_sample_indices;
@@ -104,6 +94,9 @@ int main(int argc, char* argv[]) {
 	Distance_matrix dist_S = Gudhi::read_lower_triangular_matrix_from_csv_file<Filtration_value>(file_S_dist, ' ');
 	Distance_matrix dist_X = Gudhi::read_lower_triangular_matrix_from_csv_file<Filtration_value>(file_X_dist, ' ');
 	std::cout << "Finished reading matrices and sample indices." << std::endl;
+	// ------------------------------------------------------------------------
+	// Sort subset indices and distance matrices, if necessary
+	// ------------------------------------------------------------------------
 	// SORT indices of subset and dist S 
 	std::vector<size_t> order_sample;
 	for (size_t idx = 0; idx < sample_indices.size(); idx++) {
@@ -140,6 +133,9 @@ int main(int argc, char* argv[]) {
 	}
 	sample_indices = sample_indices_sort;
 	dist_S = dist_S_sort;
+	// ------------------------------------------------------------------------
+	// Check that input is valid
+	// ------------------------------------------------------------------------
 	std::cout << "stored new sorted distance matrix" << std::endl;
 	// Check that distances from S are greater than those from X 
 	for (size_t row_idx = 0; row_idx < sample_indices.size(); row_idx++) {
@@ -190,135 +186,76 @@ int main(int argc, char* argv[]) {
 		X_barcode, X_reps,
 		pm_matrix
 	);
-
+	std::cout << "Returned from PerMoVEC" << std::endl;
 	// ---------------------------------------------------------------------------
-	// Use the PerMoVEC output to compute IBloFunMatch 
+	// Sort permovec output according to startpoint and endpoitn order and store into files
 	// ---------------------------------------------------------------------------
-	std::cout << "Ready to compute block functions" << std::endl;
+	// In dimensions 0 and 1
 	// Sort S_barcode, S_reps, S_reps_im and columns from pm_matrix 
-	// by following the "startpoint order" (dim 1 only)
+	// by following the "startpoint order" 
+	std::cout << "Sorting startpoint 0" << std::endl;
+	sort_startpoint(S_barcode[0], std::get<0>(S_reps), std::get<0>(S_reps_im), pm_matrix[0]);
+	std::cout << "Sorting startpoint 1" << std::endl;
 	sort_startpoint(S_barcode[1], std::get<1>(S_reps), std::get<1>(S_reps_im), pm_matrix[1]);
 	// Do the same on X by following the endpoint order 
+	std::cout << "Sorting endpoint 0" << std::endl;
+	sort_endpoint(X_barcode[0], std::get<0>(X_reps), pm_matrix[0]);
+	std::cout << "Sorting endpoint 1" << std::endl;
 	sort_endpoint(X_barcode[1], std::get<1>(X_reps), pm_matrix[1]);
-	// Print out barcodes, cycle reps and matrix 
-	// Save info into files
-	std::cout << "Length X_barcode[1]: " << X_barcode[1].size() << std::endl;
-	std::ofstream out_X_bar("output/X_barcode.out");
-	for (Interval bar : X_barcode[1]) {
-		out_X_bar << bar.first << " " << bar.second << std::endl;
-	}
-	out_X_bar.close();
-	std::ofstream out_X_reps("output/X_reps.out");
-	for (Cycle_rep_1 cycle_rep : std::get<1>(X_reps)) {
-		for (Vertex_pair edge : cycle_rep) {
-			out_X_reps << edge.first << " " << edge.second << " ";
-		}
-		out_X_reps << std::endl;
-	}
-	out_X_reps.close();
-	std::ofstream out_S_bar("output/S_barcode.out");
-	for (Interval bar : S_barcode[1]) {
-		out_S_bar << bar.first << " " << bar.second << std::endl;
-	}
-	out_S_bar.close();
-	std::ofstream out_S_reps("output/S_reps.out");
-	for (Cycle_rep_1 cycle_rep : std::get<1>(S_reps)) {
-		for (Vertex_pair edge : cycle_rep) {
-			out_S_reps << sample_indices[edge.first] << " " << sample_indices[edge.second] << " ";
-		}
-		out_S_reps << std::endl;
-	}
-	out_S_reps.close();
-	std::ofstream out_S_reps_im("output/S_reps_im.out");
-	for (Cycle_rep_1 cycle_rep : std::get<1>(S_reps_im)) {
-		for (Vertex_pair edge : cycle_rep) {
-			out_S_reps_im << edge.first << " " << edge.second << " ";
-		}
-		out_S_reps_im << std::endl;
-	}
-	out_S_reps_im.close();
-	std::ofstream out_pm_matrix("output/pm_matrix.out");
-	for (std::vector<Phat_index>& column : pm_matrix[1]) {
-		for (Phat_index entry : column) {
-			out_pm_matrix << entry << " ";
-		}
-		out_pm_matrix << std::endl;
-	}
-	out_pm_matrix.close();
-	// Print out 0 dimensional barcode and representatives from set and subset
-	std::ofstream out_X_barcode_0("output/X_barcode_0.out");
-	for (Interval bar : X_barcode[0]) {
-		out_X_barcode_0 << bar.first << " " << bar.second << std::endl;
-	}
-	out_X_barcode_0.close();
 
-	std::ofstream out_X_reps_0("output/X_reps_0.out");
-	for (Phat_column rep : std::get<0>(X_reps)) {
-		for (Phat_index entry : rep) {
-			out_X_reps_0 << entry << " ";
-		}
-		out_X_reps_0 << std::endl;
-	}
-	out_X_reps_0.close();
-
-	std::ofstream out_S_barcode_0("output/S_barcode_0.out");
-	for (Interval bar : S_barcode[0]) {
-		out_S_barcode_0 << bar.first << " " << bar.second << std::endl;
-	}
-	out_S_barcode_0.close();
-
-	std::ofstream out_S_reps_0("output/S_reps_0.out");
-	for (Phat_column rep_0 : std::get<0>(S_reps)) {
-		for (Phat_index entry : rep_0) {
-			out_S_reps_0 << entry << " ";
-		}
-		out_S_reps_0 << std::endl;
-	}
-	out_S_reps_0.close();
+	// Save permovec output into files (for dimensions 0 and 1)
+	store_permovec_output(S_barcode, S_reps, S_reps_im, X_barcode, X_reps, pm_matrix, sample_indices);
+	
 	//----------------------------------------------------------------
 	// COMPUTE INDUCED MATCHING 
 	//----------------------------------------------------------------
-	// Prepare matrix to reduce 
-	Phat_boundary_matrix red_pm_matrix;
-	std::cout << "Filling red_pm_matrix" << std::endl;
-	Phat_index start_index = X_barcode[1].size();
-	red_pm_matrix.set_num_cols(start_index + pm_matrix[1].size());
-	for (Phat_index col_idx = 0; col_idx < pm_matrix[1].size(); col_idx++) {
-		red_pm_matrix.set_col(start_index + col_idx, pm_matrix[1][col_idx]);
-	}
-	std::cout << "Filled, printing: " << std::endl;
-	for (Phat_index col_idx = start_index; col_idx < red_pm_matrix.get_num_cols(); col_idx++) {
-		std::vector<Phat_index> column;
-		red_pm_matrix.get_col(col_idx, column);
-		std::cout << col_idx << " : ";
-		for (Phat_index entry : column) {
-			std::cout << entry << " ";
+	std::vector<std::vector<Phat_index>> induced_matching_dim;
+	std::cout << "Ready to compute the induced matchings" << std::endl;
+	for (int dim = 0; dim < 2; dim++) {
+		// Prepare matrix to reduce 
+		Phat_boundary_matrix red_pm_matrix;
+		std::cout << "Filling red_pm_matrix" << std::endl;
+		Phat_index start_index = X_barcode[dim].size();
+		red_pm_matrix.set_num_cols(start_index + pm_matrix[dim].size());
+		for (Phat_index col_idx = 0; col_idx < pm_matrix[dim].size(); col_idx++) {
+			red_pm_matrix.set_col(start_index + col_idx, pm_matrix[dim][col_idx]);
 		}
-		std::cout << std::endl;
-	}
-	std::cout << "Now going to reduce" << std::endl;
-	// Reduce matrix using PHAT
-	phat::persistence_pairs _pairs;
-	// compute persistent homology by means of the standard reduction
-	phat::compute_persistence_pairs<phat::standard_reduction>(_pairs, red_pm_matrix);
-	// Read column pivots and store into matching 
-	std::cout << "Reduced" << std::endl;
-	// Value of -1 means that there is no matching 
-	std::vector<Phat_index> induced_matching(pm_matrix[1].size(), -1);
-	for (Phat_index col_idx = start_index; col_idx < red_pm_matrix.get_num_cols(); col_idx++) {
-		std::vector<Phat_index> column;
-		red_pm_matrix.get_col(col_idx, column);
-		if (column.size() > 0) {
-			induced_matching[col_idx-start_index] = column.back();
+		std::cout << "Filled, printing: " << std::endl;
+		for (Phat_index col_idx = start_index; col_idx < red_pm_matrix.get_num_cols(); col_idx++) {
+			std::vector<Phat_index> column;
+			red_pm_matrix.get_col(col_idx, column);
+			std::cout << col_idx << " : ";
+			for (Phat_index entry : column) {
+				std::cout << entry << " ";
+			}
+			std::cout << std::endl;
 		}
-	}
-	// Store induced matching into file 
-	std::ofstream out_ind_match("output/induced_matching.out");
-	for (Phat_index idx_match : induced_matching) {
-		out_ind_match << idx_match << std::endl;
-	}
-	out_ind_match.close();
-
+		std::cout << "Now going to reduce" << std::endl;
+		// Reduce matrix using PHAT
+		phat::persistence_pairs _pairs;
+		// compute persistent homology by means of the standard reduction
+		phat::compute_persistence_pairs<phat::standard_reduction>(_pairs, red_pm_matrix);
+		// Read column pivots and store into matching 
+		std::cout << "Reduced" << std::endl;
+		// Value of -1 means that there is no matching 
+		std::vector<Phat_index> induced_matching(pm_matrix[dim].size(), -1);
+		for (Phat_index col_idx = start_index; col_idx < red_pm_matrix.get_num_cols(); col_idx++) {
+			std::vector<Phat_index> column;
+			red_pm_matrix.get_col(col_idx, column);
+			if (column.size() > 0) {
+				induced_matching[col_idx - start_index] = column.back();
+			}
+		}
+		// Store induced matching into variable
+		induced_matching_dim.push_back(induced_matching);
+		// Store induced matching into file 
+		std::string ind_match_f = "output/induced_matching_" + std::to_string(dim) + ".out";
+		std::ofstream out_ind_match(ind_match_f);
+		for (Phat_index idx_match : induced_matching) {
+			out_ind_match << idx_match << std::endl;
+		}
+		out_ind_match.close();
+	} // compute induced matching on dimensions 0 and 1
 	
 	// ---------------------------------------------------------------------------------//
 	// Compute Matching Strength 
@@ -327,8 +264,8 @@ int main(int argc, char* argv[]) {
 	
 	std::vector<double> matching_strengths;
 	std::cout << "Image intervals:" << std::endl;
-	for (idx_S = 0; idx_S < induced_matching.size(); idx_S++) {
-		size_t idx_match = induced_matching[idx_S];
+	for (idx_S = 0; idx_S < induced_matching_dim[1].size(); idx_S++) {
+		size_t idx_match = induced_matching_dim[1][idx_S];
 		if ((idx_match < 0)||(idx_match>=X_barcode[1].size())) { // check it is a proper matching
 			std::cout << "idx_S: " << idx_S << " (not matched)" << std::endl << std::endl;
 			matching_strengths.push_back(-1);
@@ -459,91 +396,8 @@ int main(int argc, char* argv[]) {
 	out_match_strength << std::endl;
 	out_match_strength.close();
 	// Now compute other quantities 
-	// -------------------------------------------------------------------------------//
-	// Matching in 0 dimension
-	// -------------------------------------------------------------------------------//
 	return 0;
 } // End main
-
-void sort_startpoint(
-	std::vector<Interval>& barcode_1,
-	std::vector<Cycle_rep_1>& cycles_1,
-	std::vector<Cycle_rep_1>& cycles_1_im,
-	std::vector<std::vector<Phat_index>>& pm_matrix_1) 
-{
-	std::vector<size_t> sort_indices;
-	for (size_t idx = 0; idx < barcode_1.size(); idx++) {
-		sort_indices.push_back(idx);
-	}
-	std::sort(
-		sort_indices.begin(), sort_indices.end(),
-		[&barcode_1](size_t& i, size_t& j) {
-			return (barcode_1[i].first < barcode_1[j].first) || (
-				(barcode_1[i].first == barcode_1[j].first) && (barcode_1[i].second < barcode_1[j].second)
-				);
-		}
-	);
-	std::vector<Interval> sorted_barcode;
-	std::vector<Cycle_rep_1> sorted_cycle;
-	std::vector<Cycle_rep_1> sorted_cycle_im;
-	std::vector<std::vector<Phat_index>> sorted_matrix;
-	for (size_t idx : sort_indices) {
-		sorted_barcode.push_back(barcode_1[idx]);
-		sorted_cycle.push_back(cycles_1[idx]);
-		sorted_cycle_im.push_back(cycles_1_im[idx]);
-		sorted_matrix.push_back(pm_matrix_1[idx]);
-
-	}
-	barcode_1 = sorted_barcode;
-	cycles_1 = sorted_cycle;
-	cycles_1_im = sorted_cycle_im;
-	pm_matrix_1 = sorted_matrix;
-}
-
-void sort_endpoint(
-	std::vector<Interval>& barcode_1,
-	std::vector<Cycle_rep_1>& cycles_1,
-	std::vector<std::vector<Phat_index>>& pm_matrix_1)
-{
-	std::vector<size_t> sort_indices;
-	for (size_t idx = 0; idx < barcode_1.size(); idx++) {
-		sort_indices.push_back(idx);
-	}
-	std::sort(
-		sort_indices.begin(), sort_indices.end(),
-		[&barcode_1](size_t& i, size_t& j) {
-			return (barcode_1[i].second < barcode_1[j].second) || (
-				(barcode_1[i].second == barcode_1[j].second) && (barcode_1[i].first < barcode_1[j].first)
-				);
-		}
-	);
-	std::vector<Interval> sorted_barcode;
-	std::vector<Cycle_rep_1> sorted_cycle;
-	for (size_t idx : sort_indices) {
-		sorted_barcode.push_back(barcode_1[idx]);
-		sorted_cycle.push_back(cycles_1[idx]);
-	}
-	barcode_1 = sorted_barcode;
-	cycles_1 = sorted_cycle;
-	// Now proceed to sort rows of pm_matrix 
-	std::vector<std::vector<Phat_index>> sorted_matrix;
-	// First create a handy unordered map
-	std::unordered_map<Phat_index, Phat_index> sort_indices_inv; 
-	size_t index_count = 0;
-	for (size_t index : sort_indices) {
-		sort_indices_inv[index] = index_count;
-		index_count++;
-	}
-	for (std::vector<Phat_index>& column : pm_matrix_1) {
-		std::vector<Phat_index> new_col;
-		for (Phat_index entry : column) {
-			new_col.push_back(sort_indices_inv[entry]);
-		}
-		std::sort(new_col.begin(), new_col.end());
-		sorted_matrix.push_back(new_col);
-	}
-	pm_matrix_1 = sorted_matrix;
-}
 
 
 void merge_distances(
