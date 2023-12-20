@@ -11,7 +11,7 @@ print(f"EXECUTABLE_PATH: {EXECUTABLE_PATH}")
 attributes = ["X_barcode", "S_barcode", "X_reps", "S_reps", "S_reps_im", "pm_matrix", "induced_matching", "matching_strengths"]
 types_list = ["float", "float", "int", "int", "int", "int", "int", "float"]
 
-def get_IBloFunMatch_subset(Dist_S, Dist_X, idS, output_dir, max_rad=-1, num_it=1, store_0_pm=False):
+def get_IBloFunMatch_subset(Dist_S, Dist_X, idS, output_dir, max_rad=-1, num_it=1, store_0_pm=False, points=False):
     # Buffer files to write subsets and classes for communicating with C++ program 
     f_ind_sampl = output_dir + "/" + "indices_sample.out"
     f_dist_X = output_dir + "/" + "dist_X.out"
@@ -19,8 +19,14 @@ def get_IBloFunMatch_subset(Dist_S, Dist_X, idS, output_dir, max_rad=-1, num_it=
     output_data = {}
     # Compute distance matrices and save
     np.savetxt(f_ind_sampl, idS, fmt="%d", delimiter=" ", newline="\n")
-    np.savetxt(f_dist_X, Dist_X, fmt="%.14e", delimiter=" ", newline="\n")
-    np.savetxt(f_dist_S, Dist_S, fmt="%.14e", delimiter=" ", newline="\n")
+    if points:
+        with open(f_dist_X, "w") as f:
+            f.write("OFF\n")
+            f.write(f"{Dist_X.shape[0]} 0 0\n")
+            np.savetxt(f, Dist_X, fmt="%.14e", delimiter=" ", newline="\n")
+    else:
+        np.savetxt(f_dist_X, Dist_X, fmt="%.14e", delimiter=" ", newline="\n")
+        np.savetxt(f_dist_S, Dist_S, fmt="%.14e", delimiter=" ", newline="\n")
     # Call IBloFunMatch C++ program (only for dimension 1 PH)
     extra_flags = ""
     if max_rad!=-1:
@@ -31,6 +37,8 @@ def get_IBloFunMatch_subset(Dist_S, Dist_X, idS, output_dir, max_rad=-1, num_it=
     # added number of collapses iteration flag
     if(store_0_pm):
         extra_flags += " -z true "
+    if(points):
+        extra_flags += " -c true "
     # only if we want to store the 0 dimensional pm matrix
 
     os.system(EXECUTABLE_PATH + " " + f_dist_S + " " + f_dist_X + " " + f_ind_sampl + " -d 2 " + extra_flags )

@@ -65,10 +65,18 @@ void merge_distances(
 	Phat_index bar_idx, std::vector<Phat_index>& related_intervals, Phat_index num_vertices,
 	Barcodes_dim& dimBarcode,
 	Reps_dim& dimReps,
+	Filtration_value& threshold,
 	std::vector<double>& merge_values
 );
 
 int main(int argc, char* argv[]) {
+	std::cout << "WELCOME TO IBLOFUNMATCH!!!" << std::endl;
+	#ifdef DEBUG_STRENGTHS
+		std::cout << "Defined DEBUG_STRENGTHS-------------------------(!!!!)" << std::endl;
+    #endif
+	#ifdef DEBUG_MERGES
+		std::cout << "Defined DEBUG_MERGES-------------------------(!!!!)" << std::endl;
+	#endif
 	// ------------------------------------------------------------------------
 	// READ DATA distance matrices (or coordinates) and other options
 	// ------------------------------------------------------------------------
@@ -331,7 +339,7 @@ int main(int argc, char* argv[]) {
 
 	// ------------------------------------ DIMENSION 1 ---------------------------------
 	std::vector<double> matching_strengths;
-	std::cout << "Image intervals:" << std::endl;
+	std::cout << "Computing strenghts..." << std::endl;
 	for (idx_S = 0; idx_S < induced_matching_dim[1].size(); idx_S++) {
 		// First compute the matched image interval length
 		size_t idx_match = induced_matching_dim[1][idx_S];
@@ -343,10 +351,13 @@ int main(int argc, char* argv[]) {
 		double birth = S_barcode[1][idx_S].first;
 		double death = X_barcode[1][idx_match].second;
 		double im_len = death - birth;
-		std::cout << "idx_S: " << idx_S << " ";
-		std::cout << "idx_match: " << idx_match << " ";
-		std::cout << "[" << birth << ", " << death;
-		std::cout << "), im_len: " << im_len << std::endl;
+
+		#ifdef DEBUG_STRENGTHS
+			std::cout << "idx_S: " << idx_S << " ";
+			std::cout << "idx_match: " << idx_match << " ";
+			std::cout << "[" << birth << ", " << death;
+			std::cout << "), im_len: " << im_len << std::endl;
+		#endif
 		// -------------------------------------------------------------------------------//
 		// Compute Strength on S 
 		// -------------------------------------------------------------------------------//
@@ -363,37 +374,48 @@ int main(int argc, char* argv[]) {
 				}
 			}
 		}
+		#ifdef DEBUG_STRENGTHS
+			std::cout << "Computed related intervals on S, size: " << related_intervals.size() << std::endl;
+        #endif
 		// If there are no related intervals in S, take image overlap as min_comp_S
 		double min_comp_S = 0;
 		if (related_intervals.size()==0) {
 			min_comp_S = im_len;
 		} else {
-			std::cout << "related int S  : ";
-			for (Phat_index i : related_intervals) {
-				printf("%5ld, ", i);
-			}
-			std::cout << std::endl;
+			#ifdef DEBUG_STRENGTHS
+				std::cout << "related int S  : ";
+				for (Phat_index i : related_intervals) {
+					printf("%5ld, ", i);
+				}
+				std::cout << std::endl;
+            #endif
 			// Compute Strength of merges
 			std::vector<double> merge_values = {};
 			merge_distances(
-				idx_S, related_intervals, size_S, S_barcode, S_reps, merge_values
+				idx_S, related_intervals, size_S, S_barcode, S_reps, threshold, merge_values
 			);
-			std::cout << "S_compare orig : ";
-			for (int i = 0; i < S_compare.size(); i++) {
-				printf("%.3f, ", S_compare[i]);
-			}
-			std::cout << std::endl;
-			std::cout << "Merge values S : ";
+			#ifdef DEBUG_STRENGTHS
+				std::cout << "S_compare orig : ";
+				for (int i = 0; i < S_compare.size(); i++) {
+					printf("%.3f, ", S_compare[i]);
+				}
+				std::cout << std::endl;
+				std::cout << "Merge values S : ";
+				for (int i = 0; i < merge_values.size(); i++) {
+					printf("%.3f, ", merge_values[i]);
+				}
+				std::cout << std::endl;
+			#endif
 			for (int i = 0; i < merge_values.size(); i++) {
-				printf("%.3f, ", merge_values[i]);
 				S_compare[i] = std::max(S_compare[i], merge_values[i]);
 			}
-			std::cout << std::endl;
-			std::cout << "S_compare res  : ";
-			for (int i = 0; i < S_compare.size(); i++) {
-				printf("%.3f, ", S_compare[i]);
-			}
-			std::cout << std::endl;
+            #ifdef DEBUG_STRENGTHS
+				std::cout << "S_compare res  : ";
+				for (int i = 0; i < S_compare.size(); i++) {
+					printf("%.3f, ", S_compare[i]);
+				}
+				std::cout << std::endl;
+            #endif
 			// Take minimum from endpoint comparisons 
 			min_comp_S = S_compare[0];
 			for (double comp_val : S_compare) {
@@ -421,40 +443,50 @@ int main(int argc, char* argv[]) {
 		if (related_intervals_X.size() == 0) {
 			min_comp_X = im_len;
 		} else {
-			std::cout << "related int X  : ";
-			for (Phat_index i : related_intervals_X) {
-				printf("%5ld, ", i);
-			}
-			std::cout << std::endl;
+			#ifdef DEBUG_STRENGTHS
+				std::cout << "related int X  : ";
+				for (Phat_index i : related_intervals_X) {
+					printf("%5ld, ", i);
+				}
+				std::cout << std::endl;
+            #endif
 			// Compute Strength of merges
 			std::vector<double> merge_values = {};
 			merge_distances(
-				idx_match, related_intervals_X, size_X, X_barcode, X_reps, merge_values
+				idx_match, related_intervals_X, size_X, X_barcode, X_reps, threshold, merge_values
 			);
-			std::cout << "X_compare orig : ";
-			for (int i = 0; i < X_compare.size(); i++) {
-				printf("%.3f, ", X_compare[i]);
-			}
-			std::cout << std::endl;
-			std::cout << "Merge values X : ";
+			#ifdef DEBUG_STRENGTHS
+			    std::cout << "X_compare orig : ";
+			    for (int i = 0; i < X_compare.size(); i++) {
+			    	printf("%.3f, ", X_compare[i]);
+			    }
+			    std::cout << std::endl;
+			    std::cout << "Merge values X : ";
+			    for (int i = 0; i < merge_values.size(); i++) {
+			    	printf("%.3f, ", merge_values[i]);
+			    }
+			    std::cout << std::endl;
+            #endif
 			for (int i = 0; i < merge_values.size(); i++) {
-				printf("%.3f, ", merge_values[i]);
 				X_compare[i] = std::max(X_compare[i], merge_values[i]);
 			}
-			std::cout << std::endl;
-			std::cout << "S_compare res  : ";
-			for (int i = 0; i < X_compare.size(); i++) {
-				printf("%.3f, ", X_compare[i]);
-			}
-			std::cout << std::endl;
+			#ifdef DEBUG_STRENGTHS
+			    std::cout << "X_compare res  : ";
+			    for (int i = 0; i < X_compare.size(); i++) {
+			    	printf("%.3f, ", X_compare[i]);
+			    }
+			    std::cout << std::endl;
+            #endif	
 			// Take minimum from endpoint comparisons 
 			min_comp_X = X_compare[0];
 			for (double comp_val : S_compare) {
 				min_comp_X = std::min(min_comp_X, comp_val);
 			}
 		}
-		std::cout << " STRENGTH: " << std::min(im_len, std::min(min_comp_S, min_comp_X)) << std::endl;
-		std::cout << std::endl;
+		#ifdef DEBUG_STRENGTHS
+			std::cout << " STRENGTH: " << std::min(im_len, std::min(min_comp_S, min_comp_X)) << std::endl;
+			std::cout << std::endl;
+        #endif
 		matching_strengths.push_back(std::min(im_len, std::min(min_comp_S, min_comp_X)));
 	} // Compute matching strenghts over each bar
 	// Store matching strengths into file 
@@ -475,8 +507,12 @@ void merge_distances(
 	Phat_index num_vertices,
 	Barcodes_dim& dimBarcode,
 	Reps_dim& dimReps,
+	Filtration_value& threshold,
 	std::vector<double>& merge_values)
 {
+	// ---------------------------------------------------------------------
+	// Initialize merging PHAT matrix and column cell dimensions
+	// ---------------------------------------------------------------------
 	// Initialize a matrix to compute when two components merge after they die
 	Phat_boundary_matrix vertex_pairs_matrix;
 	// Columns correspond to vertices, 0-dim PH classes and possible related intervals
@@ -492,9 +528,8 @@ void merge_distances(
 		vertex_pairs_matrix.set_dim(col_idx, 1);
 		col_idx++;
 	}
+	// ------------------------ Fill boundary matrix with zero PH representatives from S ---------------------
 	col_idx = num_vertices;
-	// Fill boundary matrix with zero PH representatives from S
-	
 	for (Phat_column zero_rep : std::get<0>(dimReps)) {
 		vertex_pairs_matrix.set_col(col_idx, zero_rep);
 		col_idx++;
@@ -506,6 +541,7 @@ void merge_distances(
 		    std::cout << std::endl;
 		#endif
 	}
+	// ------------------------ Fill boundary matrix with vertices from first PH representatives from S ---------------------
 	Phat_index start_index = num_vertices + dimBarcode[0].size(); // Column index where to start from
 	Phat_index bar_vertex = std::get<1>(dimReps)[bar_idx][0].first; // Just get one vertex from the representative of bar_idx
 	for (Phat_index rint_count = 0; rint_count < related_intervals.size(); rint_count++) {
@@ -519,9 +555,6 @@ void merge_distances(
 			vertex_pairs_matrix.set_col(start_index + rint_count, { std::min(vertex_i, bar_vertex), std::max(vertex_i, bar_vertex) });
 		}
 	}
-	// Fill boundary matrix with zero representatives from S and point pairs from S and reduce
-	// The result leads to the coefficients R_ij
-	phat::persistence_pairs _pairs;
 	#ifdef DEBUG_MERGES
 	    std::cout << "Going to PHAT reduce the matrix:" << std::endl;
 	    for (Phat_index j = num_vertices; j < vertex_pairs_matrix.get_num_cols(); j++) {
@@ -533,6 +566,9 @@ void merge_distances(
 	    	std::cout << std::endl;
 	    }
 	# endif
+	// ------------------------ PHAT reduce the matrix ---------------------
+	// The result leads to the coefficients R_ij
+	phat::persistence_pairs _pairs;
 	phat::compute_persistence_pairs<phat::standard_reduction>(_pairs, vertex_pairs_matrix);
 	#ifdef DEBUG_MERGES
 	    std::cout << "phat reduction done, Result" << std::endl;
@@ -548,8 +584,15 @@ void merge_distances(
 		std::cout << "dim 0 barcode: " << dimBarcode[0].size() << std::endl;
 		std::cout << "related_intervals.size(): " << related_intervals.size() << std::endl;
 	#endif
-	// Obtain merging distances 
+	// Obtain merging distances by using the PHAT result
 	for (Phat_index rint_count = 0; rint_count < related_intervals.size(); rint_count++) {
+		Phat_column reduced_col;
+		vertex_pairs_matrix.get_col(start_index + rint_count, reduced_col);
+		// If the column is not totally reduced, set up the threshold as merging distance 
+		if (reduced_col.size() > 0) {
+			merge_values.push_back(threshold);
+			continue;
+		}
 		Phat_index j_bar = related_intervals[rint_count];
 		Phat_column preim_col;
 		vertex_pairs_matrix.get_preimage(start_index + rint_count, preim_col);
@@ -557,8 +600,6 @@ void merge_distances(
 		std::sort(preim_col.begin(), preim_col.end());
 		#ifdef DEBUG_MERGES
 		    std::cout << j_bar << " col: ";
-		    Phat_column reduced_col;
-		    vertex_pairs_matrix.get_col(start_index + rint_count, reduced_col);
 		    for (Phat_index entry : reduced_col) {
 		    	std::cout << entry << " ";
 		    }
@@ -568,14 +609,16 @@ void merge_distances(
 		    }
 		    std::cout << ") " << std::endl;
 		#endif
-		// Get maximum death of both cycles
+		// Get value where components from both cycles merge
 		double merge_val = 0;
 		// Last entry of preimage_col is the index of the column, which we skip
 		for (int i = 0; i < preim_col.size()-1; i++) {
 			// First num_vertices columns are empty, barcode 0 counter starts at num_vertices
 			merge_val = std::max(merge_val, dimBarcode[0][preim_col[i] - num_vertices].second);
 		}
+		// Get maximum death of both cycles
 		double death_max = std::max(dimBarcode[1][bar_idx].second, dimBarcode[1][j_bar].second);
+		// Compute the ''Merge Distance''
 		double merge_dist = std::max(0.0, merge_val - death_max);
 		merge_values.push_back(merge_dist);
 	}
