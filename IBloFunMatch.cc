@@ -57,7 +57,7 @@ using Distance_matrix = std::vector<std::vector<Filtration_value>>;
 
 void program_options(
 	int argc, char* argv[], std::string& file_S_dist, std::string& file_X_dist, std::string& file_sample_indices,
-	Filtration_value& threshold, int& dim_max, int& edge_collapse_iter_nb
+	Filtration_value& threshold, int& dim_max, int& edge_collapse_iter_nb, bool& print_0_pm, bool& coordinate_input
 );
 
 // Function to compute merge distances of classes
@@ -70,18 +70,22 @@ void merge_distances(
 
 int main(int argc, char* argv[]) {
 	// ------------------------------------------------------------------------
-	// READ DATA distance matrices and options
+	// READ DATA distance matrices (or coordinates) and other options
 	// ------------------------------------------------------------------------
 	// Read arguments and distance matrix locations
 	std::string file_S_dist, file_X_dist, file_sample_indices;
 	Filtration_value threshold;
 	int dim_max;
 	int edge_collapse_iter_nb;
+	bool print_0_pm, coordinate_input;
 
 	program_options(
 		argc, argv, file_S_dist, file_X_dist, file_sample_indices,
-		threshold, dim_max, edge_collapse_iter_nb
+		threshold, dim_max, edge_collapse_iter_nb, print_0_pm, coordinate_input
 	);
+	// ------------------------------------------------------------------------
+	// Read and sort subset indices
+	// ------------------------------------------------------------------------
 	// Read subset indices
 	std::vector<size_t> sample_indices;
 	std::ifstream subset_idx(file_sample_indices);
@@ -89,14 +93,7 @@ int main(int argc, char* argv[]) {
 	while (subset_idx >> idx_S) {
 		sample_indices.push_back(idx_S);
 	}
-	// Read Distance Matrices 
-	std::cout << "Reading distance Matrices." << std::endl;
-	Distance_matrix dist_S = Gudhi::read_lower_triangular_matrix_from_csv_file<Filtration_value>(file_S_dist, ' ');
-	Distance_matrix dist_X = Gudhi::read_lower_triangular_matrix_from_csv_file<Filtration_value>(file_X_dist, ' ');
-	std::cout << "Finished reading matrices and sample indices." << std::endl;
-	// ------------------------------------------------------------------------
-	// Sort subset indices and distance matrices, if necessary
-	// ------------------------------------------------------------------------
+	
 	// SORT indices of subset and dist S 
 	std::vector<size_t> order_sample;
 	for (size_t idx = 0; idx < sample_indices.size(); idx++) {
@@ -109,59 +106,113 @@ int main(int argc, char* argv[]) {
 			return sample_indices[i] < sample_indices[j];
 		}
 	);
-	std::cout << "sorted sample indices, total: " << sample_indices.size()  << std::endl;
-	// Sort dist_S according to new order
-	Distance_matrix dist_S_sort;
-	for (size_t row_idx = 0; row_idx < order_sample.size(); row_idx++) {
-		size_t old_row_idx = order_sample[row_idx];
-		std::vector<Filtration_value> row;
-		for (size_t col_idx = 0; col_idx < row_idx; col_idx++) {
-			size_t old_col_idx = order_sample[col_idx];
-			if (old_row_idx > old_col_idx) {
-				row.push_back(dist_S[old_row_idx][old_col_idx]);
-			} else {
-				row.push_back(dist_S[old_col_idx][old_row_idx]);
-			}
-		}
-		dist_S_sort.push_back(row);
-	}
-	std::cout << "sorted S according to new order" << std::endl;
+
 	// Store new reordering 
 	std::vector<size_t> sample_indices_sort;
 	for (size_t idx : order_sample) {
 		sample_indices_sort.push_back(sample_indices[idx]);
 	}
 	sample_indices = sample_indices_sort;
-	dist_S = dist_S_sort;
+	std::cout << "sorted sample indices, total: " << sample_indices.size() << std::endl;
+
 	// ------------------------------------------------------------------------
-	// Check that input is valid
+	// DISTANCE MATRIX INPUT
 	// ------------------------------------------------------------------------
-	std::cout << "stored new sorted distance matrix" << std::endl;
-	// Check that distances from S are greater than those from X 
-	for (size_t row_idx = 0; row_idx < sample_indices.size(); row_idx++) {
-		for (size_t col_idx = 0; col_idx < row_idx; col_idx++) {
-			assert(dist_S[row_idx][col_idx] >= dist_X[sample_indices[row_idx]][sample_indices[col_idx]]);
+	Proximity_graph graph_S, graph_X;
+	size_t size_S = sample_indices.size(); 
+	size_t size_X;
+	if (!coordinate_input) {
+		// Read Distance Matrices 
+		std::cout << "Reading distance Matrices." << std::endl;
+		Distance_matrix dist_S = Gudhi::read_lower_triangular_matrix_from_csv_file<Filtration_value>(file_S_dist, ' ');
+		Distance_matrix dist_X = Gudhi::read_lower_triangular_matrix_from_csv_file<Filtration_value>(file_X_dist, ' ');
+		// Store size of X 
+		size_X = dist_X.size();
+		std::cout << "Finished reading matrices and sample indices." << std::endl;
+		// -------------- Sort subset distance matrix "dist_S" according to new order---------------//
+		Distance_matrix dist_S_sort;
+		for (size_t row_idx = 0; row_idx < order_sample.size(); row_idx++) {
+			size_t old_row_idx = order_sample[row_idx];
+			std::vector<Filtration_value> row;
+			for (size_t col_idx = 0; col_idx < row_idx; col_idx++) {
+				size_t old_col_idx = order_sample[col_idx];
+				if (old_row_idx > old_col_idx) {
+					row.push_back(dist_S[old_row_idx][old_col_idx]);
+				}
+				else {
+					row.push_back(dist_S[old_col_idx][old_row_idx]);
+				}
+			}
+			dist_S_sort.push_back(row);
 		}
+		dist_S = dist_S_sort;
+		std::cout << "sorted S according to new order" << std::endl;
+		// -------------------- Check that input is valid (if necessary)----------------------------------//
+		std::cout << "stored new sorted distance matrix" << std::endl;
+		if (!coordinate_input) {
+			// Check that distances from S are greater than those from X 
+			for (size_t row_idx = 0; row_idx < sample_indices.size(); row_idx++) {
+				for (size_t col_idx = 0; col_idx < row_idx; col_idx++) {
+					assert(dist_S[row_idx][col_idx] >= dist_X[sample_indices[row_idx]][sample_indices[col_idx]]);
+				}
+			}
+			std::cout << "Correctly checked inequality on dist_S and dist_X" << std::endl;
+		}
+		// -------------------- Compute proximity graphs  ---------------------------// 
+		graph_S = Gudhi::compute_proximity_graph<Simplex_tree>(
+			boost::irange((size_t)0, dist_S.size()),
+			threshold,
+			[&dist_S](size_t i, size_t j) {
+				return dist_S[j][i];
+			}
+		);
+		graph_X = Gudhi::compute_proximity_graph<Simplex_tree>(
+			boost::irange((size_t)0, dist_X.size()),
+			threshold,
+			[&dist_X](size_t i, size_t j) {
+				return dist_X[j][i];
+			}
+		);
 	}
-	std::cout << "Correctly checked inequality on dist_S and dist_X" << std::endl;
 	// ------------------------------------------------------------------------
-	// Call PerMoVEC and initialize variables
+	// COORDINATES INPUT
 	// ------------------------------------------------------------------------
-	// Compute Proximity Graphs 
-	Proximity_graph graph_X = Gudhi::compute_proximity_graph<Simplex_tree>(
-		boost::irange((size_t)0, dist_X.size()),
-		threshold,
-		[&dist_X](size_t i, size_t j) {
-			return dist_X[j][i];
+	else {
+		// Read coordinates
+		// Extract the points from the file filepoints (subset)
+		Points_off_reader off_reader_points(file_X_dist);
+		if (!off_reader_points.is_valid()) {
+			std::cout << "Off reader failed." << std::endl;
 		}
-	);
-	Proximity_graph graph_S = Gudhi::compute_proximity_graph<Simplex_tree>(
-		boost::irange((size_t)0, dist_S.size()),
-		threshold,
-		[&dist_S](size_t i, size_t j) {
-			return dist_S[j][i];
+		std::vector<Point> point_X = off_reader_points.get_point_cloud();
+		// Store size of X 
+		size_X = point_X.size();
+		// Now read subset indices
+		std::vector<size_t> sample_indices;
+		std::ifstream subset_idx(file_sample_indices);
+		size_t idx_S;
+		while (subset_idx >> idx_S) {
+			sample_indices.push_back(idx_S);
 		}
-	);
+		std::sort(sample_indices.begin(), sample_indices.end());
+		std::vector<Point> point_S;
+		for (int idx : sample_indices) {
+			point_S.push_back(point_X.at(idx));
+		}
+		// --------------------- Compute proximity graphs ---------------------------
+		// Compute the proximity graph of the points for set and subset
+		graph_S = Gudhi::compute_proximity_graph<Simplex_tree>(point_S,
+			threshold,
+			Gudhi::Euclidean_distance());
+		graph_X = Gudhi::compute_proximity_graph<Simplex_tree>(point_X,
+			threshold,
+			Gudhi::Euclidean_distance());
+	}
+	
+	// ------------------------------------------------------------------------
+	// Initialize edge lists and call PerMoVec
+	// ------------------------------------------------------------------------
+	// Compute graph edges 
 	auto edges_graph_S = boost::adaptors::transform(edges(graph_S), [&](auto&& edge) {
 		return std::make_tuple(source(edge, graph_S),
 		target(edge, graph_S),
@@ -172,14 +223,16 @@ int main(int argc, char* argv[]) {
 		target(edge, graph_X),
 		get(Gudhi::edge_filtration_t(), graph_X, edge));
 		});
+	// Store graph edges into list
 	std::vector<Filtered_edge> edges_list_S(edges_graph_S.begin(), edges_graph_S.end());
 	std::vector<Filtered_edge> edges_list_X(edges_graph_X.begin(), edges_graph_X.end());
-	// Compute barcodes and matrix associated to persistence morphism
+	// Initialize output variables
 	Barcodes_dim S_barcode, X_barcode;
 	Reps_dim S_reps, S_reps_im, X_reps;
 	Matrix_dim pm_matrix;
+	// Call PerMoVec to get persistent homologies and associated matrices
 	pairs_and_matrix_VR(
-		dist_X.size(), dist_S.size(), sample_indices,
+		size_X, size_S, sample_indices,
 		edges_list_X, edges_list_S,
 		threshold, dim_max, edge_collapse_iter_nb,
 		S_barcode, S_reps, S_reps_im,
@@ -204,7 +257,7 @@ int main(int argc, char* argv[]) {
 	sort_endpoint(X_barcode[1], std::get<1>(X_reps), pm_matrix[1]);
 
 	// Save permovec output into files (for dimensions 0 and 1)
-	store_permovec_output(S_barcode, S_reps, S_reps_im, X_barcode, X_reps, pm_matrix, sample_indices);
+	store_permovec_output(S_barcode, S_reps, S_reps_im, X_barcode, X_reps, pm_matrix, sample_indices, print_0_pm);
 	
 	//----------------------------------------------------------------
 	// COMPUTE INDUCED MATCHING 
@@ -260,11 +313,27 @@ int main(int argc, char* argv[]) {
 	// ---------------------------------------------------------------------------------//
 	// Compute Matching Strength 
 	// ---------------------------------------------------------------------------------//
-	// First compute the matched image interval length
-	
+	// ------------------------------------ DIMENSION 0 ---------------------------------
+	std::ofstream out_match_strength("output/matching_strengths_0.out");
+	for (idx_S = 0; idx_S < induced_matching_dim[0].size(); idx_S++) {
+		// First compute the matched image interval length
+		size_t idx_match = induced_matching_dim[0][idx_S];
+		if ((idx_match < 0) || (idx_match >= X_barcode[0].size())) { // check it is a proper matching
+			out_match_strength << -1 << " ";
+			continue;
+		}
+		double death = X_barcode[0][idx_match].second;
+		// 0 intervals are all born at 0
+		out_match_strength << death << " ";
+	}
+	out_match_strength << std::endl;
+	out_match_strength.close();
+
+	// ------------------------------------ DIMENSION 1 ---------------------------------
 	std::vector<double> matching_strengths;
 	std::cout << "Image intervals:" << std::endl;
 	for (idx_S = 0; idx_S < induced_matching_dim[1].size(); idx_S++) {
+		// First compute the matched image interval length
 		size_t idx_match = induced_matching_dim[1][idx_S];
 		if ((idx_match < 0)||(idx_match>=X_barcode[1].size())) { // check it is a proper matching
 			std::cout << "idx_S: " << idx_S << " (not matched)" << std::endl << std::endl;
@@ -307,7 +376,7 @@ int main(int argc, char* argv[]) {
 			// Compute Strength of merges
 			std::vector<double> merge_values = {};
 			merge_distances(
-				idx_S, related_intervals, dist_S.size(), S_barcode, S_reps, merge_values
+				idx_S, related_intervals, size_S, S_barcode, S_reps, merge_values
 			);
 			std::cout << "S_compare orig : ";
 			for (int i = 0; i < S_compare.size(); i++) {
@@ -360,7 +429,7 @@ int main(int argc, char* argv[]) {
 			// Compute Strength of merges
 			std::vector<double> merge_values = {};
 			merge_distances(
-				idx_match, related_intervals_X, dist_X.size(), X_barcode, X_reps, merge_values
+				idx_match, related_intervals_X, size_X, X_barcode, X_reps, merge_values
 			);
 			std::cout << "X_compare orig : ";
 			for (int i = 0; i < X_compare.size(); i++) {
@@ -389,9 +458,9 @@ int main(int argc, char* argv[]) {
 		matching_strengths.push_back(std::min(im_len, std::min(min_comp_S, min_comp_X)));
 	} // Compute matching strenghts over each bar
 	// Store matching strengths into file 
-	std::ofstream out_match_strength("output/matching_strengths.out");
-	for (double idx_match : matching_strengths) {
-		out_match_strength << idx_match << " ";
+	out_match_strength.open("output/matching_strengths_1.out");
+	for (double strength_m : matching_strengths) {
+		out_match_strength << strength_m << " ";
 	}
 	out_match_strength << std::endl;
 	out_match_strength.close();
@@ -425,14 +494,17 @@ void merge_distances(
 	}
 	col_idx = num_vertices;
 	// Fill boundary matrix with zero PH representatives from S
-	std::cout << "zero reps" << std::endl;
+	
 	for (Phat_column zero_rep : std::get<0>(dimReps)) {
 		vertex_pairs_matrix.set_col(col_idx, zero_rep);
-		for (Phat_index entry : zero_rep) {
-			std::cout << entry << " ";
-		}
-		std::cout << std::endl;
 		col_idx++;
+		#ifdef DEBUG_MERGES
+		    std::cout << "zero rep: " << std::endl;
+		    for (Phat_index entry : zero_rep) {
+		    	std::cout << entry << " ";
+		    }
+		    std::cout << std::endl;
+		#endif
 	}
 	Phat_index start_index = num_vertices + dimBarcode[0].size(); // Column index where to start from
 	Phat_index bar_vertex = std::get<1>(dimReps)[bar_idx][0].first; // Just get one vertex from the representative of bar_idx
@@ -450,59 +522,59 @@ void merge_distances(
 	// Fill boundary matrix with zero representatives from S and point pairs from S and reduce
 	// The result leads to the coefficients R_ij
 	phat::persistence_pairs _pairs;
-	std::cout << "Going to PHAT reduce the matrix:" << std::endl;
-	for (Phat_index j = num_vertices; j < vertex_pairs_matrix.get_num_cols(); j++) {
-		Phat_column column;
-		vertex_pairs_matrix.get_col(j, column);
-		for (Phat_index entry : column) {
-			std::cout << entry << " ";
-		}
-		std::cout << std::endl;
-	}
+	#ifdef DEBUG_MERGES
+	    std::cout << "Going to PHAT reduce the matrix:" << std::endl;
+	    for (Phat_index j = num_vertices; j < vertex_pairs_matrix.get_num_cols(); j++) {
+	    	Phat_column column;
+	    	vertex_pairs_matrix.get_col(j, column);
+	    	for (Phat_index entry : column) {
+	    		std::cout << entry << " ";
+	    	}
+	    	std::cout << std::endl;
+	    }
+	# endif
 	phat::compute_persistence_pairs<phat::standard_reduction>(_pairs, vertex_pairs_matrix);
-	std::cout << "phat reduction done, Result" << std::endl;
-	for (Phat_index j = num_vertices; j < vertex_pairs_matrix.get_num_cols(); j++) {
-		Phat_column column;
-		vertex_pairs_matrix.get_col(j, column);
-		for (Phat_index entry : column) {
-			std::cout << entry << " ";
-		}
-		std::cout << std::endl;
-	}
-	std::cout << "num_vertices : " << num_vertices << std::endl;
-	std::cout << "dim 0 barcode: " << dimBarcode[0].size() << std::endl;
-	std::cout << "related_intervals.size(): " << related_intervals.size() << std::endl;
+	#ifdef DEBUG_MERGES
+	    std::cout << "phat reduction done, Result" << std::endl;
+	    for (Phat_index j = num_vertices; j < vertex_pairs_matrix.get_num_cols(); j++) {
+	    	Phat_column column;
+	    	vertex_pairs_matrix.get_col(j, column);
+	    	for (Phat_index entry : column) {
+	    		std::cout << entry << " ";
+	    	}
+	    	std::cout << std::endl;
+	    }
+		std::cout << "num_vertices : " << num_vertices << std::endl;
+		std::cout << "dim 0 barcode: " << dimBarcode[0].size() << std::endl;
+		std::cout << "related_intervals.size(): " << related_intervals.size() << std::endl;
+	#endif
 	// Obtain merging distances 
 	for (Phat_index rint_count = 0; rint_count < related_intervals.size(); rint_count++) {
 		Phat_index j_bar = related_intervals[rint_count];
-		std::cout << j_bar << " col: ";
-		Phat_column reduced_col;
-		vertex_pairs_matrix.get_col(start_index + rint_count, reduced_col);
-		for (Phat_index entry : reduced_col) {
-			std::cout << entry << " ";
-		}
-		std::cout << ") p(";
 		Phat_column preim_col;
 		vertex_pairs_matrix.get_preimage(start_index + rint_count, preim_col);
-		for (int i = 0; i < preim_col.size(); i++) {
-			std::cout << preim_col[i] - num_vertices << " ";
-		}
-		std::cout << ") sorted (";
 		// sort preimage 
 		std::sort(preim_col.begin(), preim_col.end());
-		for (int i = 0; i < preim_col.size(); i++) {
-			std::cout << preim_col[i] - num_vertices << " ";
-		}
-		std::cout << std::endl;
+		#ifdef DEBUG_MERGES
+		    std::cout << j_bar << " col: ";
+		    Phat_column reduced_col;
+		    vertex_pairs_matrix.get_col(start_index + rint_count, reduced_col);
+		    for (Phat_index entry : reduced_col) {
+		    	std::cout << entry << " ";
+		    }
+		    std::cout << ") p(";
+		    for (int i = 0; i < preim_col.size(); i++) {
+		    	std::cout << preim_col[i] - num_vertices << " ";
+		    }
+		    std::cout << ") " << std::endl;
+		#endif
 		// Get maximum death of both cycles
 		double merge_val = 0;
 		// Last entry of preimage_col is the index of the column, which we skip
 		for (int i = 0; i < preim_col.size()-1; i++) {
-			std::cout << preim_col[i] -num_vertices<< " ";
 			// First num_vertices columns are empty, barcode 0 counter starts at num_vertices
 			merge_val = std::max(merge_val, dimBarcode[0][preim_col[i] - num_vertices].second);
 		}
-		std::cout <<  std::endl;
 		double death_max = std::max(dimBarcode[1][bar_idx].second, dimBarcode[1][j_bar].second);
 		double merge_dist = std::max(0.0, merge_val - death_max);
 		merge_values.push_back(merge_dist);
@@ -511,29 +583,38 @@ void merge_distances(
 
 void program_options(
 	int argc, char* argv[], std::string& file_S_dist, std::string& file_X_dist, std::string& file_sample_indices,
-	Filtration_value& threshold, int& dim_max, int& edge_collapse_iter_nb
+	Filtration_value& threshold, int& dim_max, int& edge_collapse_iter_nb, bool& print_0_pm, bool& coordinate_input
 ) {
 	namespace po = boost::program_options;
 	po::options_description hidden("Hidden options");
 	hidden.add_options()(
 		"S_dist", po::value<std::string>(&file_S_dist),
-		"Text file containing the distance matrix of S.");
+		"Text file containing the distance matrix of S. If coordinate-input=true, this file is ignored.");
 	hidden.add_options()(
 		"X_dist", po::value<std::string>(&file_X_dist),
-		"Text file containing the distance matrix of X.");
+		"Text file containing the distance matrix of X. If coordinate-input=true, this file should contain the coordinates of X.");
 	hidden.add_options()(
 		"sample-indices", po::value<std::string>(&file_sample_indices),
 		"Indices corresponding to S within X");
 
 	po::options_description visible("Allowed options", 100);
 	visible.add_options()("help,h", "produce help message")(
-		"max-edge-length,r",
+		"max-edge-length,r", 
 		po::value<Filtration_value>(&threshold)->default_value(std::numeric_limits<Filtration_value>::infinity()),
-		"Maximal length of an edge for the Rips complex construction.")(
-			"cpx-dimension,d", po::value<int>(&dim_max)->default_value(1),
-			"Maximal dimension of the Rips complex we want to compute.")(
-				"edge-collapse-iterations,i", po::value<int>(&edge_collapse_iter_nb)->default_value(1),
-				"Number of iterations edge collapse is performed.");
+		"Maximal length of an edge for the Rips complex construction."
+		)(
+		"cpx-dimension,d", po::value<int>(&dim_max)->default_value(1),
+		"Maximal dimension of the Rips complex we want to compute."
+		)(
+		"edge-collapse-iterations,i", po::value<int>(&edge_collapse_iter_nb)->default_value(1),
+		"Number of iterations edge collapse is performed."
+		)(
+		"save-0-pm-matrix,z", po::value<bool>(&print_0_pm)->default_value(false),
+		"Print 0 persistence morphism matrix into a file (might be big)."
+		)(
+		"coordinate-input,c", po::value<bool>(&coordinate_input)->default_value(false),
+		"Whether the input are coordinates of the dataset."
+	);
 
 	po::positional_options_description pos;
 	pos.add("S_dist", 1);

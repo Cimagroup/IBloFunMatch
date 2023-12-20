@@ -11,7 +11,7 @@ print(f"EXECUTABLE_PATH: {EXECUTABLE_PATH}")
 attributes = ["X_barcode", "S_barcode", "X_reps", "S_reps", "S_reps_im", "pm_matrix", "induced_matching", "matching_strengths"]
 types_list = ["float", "float", "int", "int", "int", "int", "int", "float"]
 
-def get_IBloFunMatch_subset(Dist_S, Dist_X, idS, output_dir, max_rad=-1, num_it=1):
+def get_IBloFunMatch_subset(Dist_S, Dist_X, idS, output_dir, max_rad=-1, num_it=1, store_0_pm=False):
     # Buffer files to write subsets and classes for communicating with C++ program 
     f_ind_sampl = output_dir + "/" + "indices_sample.out"
     f_dist_X = output_dir + "/" + "dist_X.out"
@@ -29,44 +29,52 @@ def get_IBloFunMatch_subset(Dist_S, Dist_X, idS, output_dir, max_rad=-1, num_it=
     if(num_it>1):
         extra_flags += " -i " + f"{num_it:d}" + " "
     # added number of collapses iteration flag
+    if(store_0_pm):
+        extra_flags += " -z true "
+    # only if we want to store the 0 dimensional pm matrix
 
     os.system(EXECUTABLE_PATH + " " + f_dist_S + " " + f_dist_X + " " + f_ind_sampl + " -d 2 " + extra_flags )
     # Save barcodes and representatives reading them from output files
     data_read = []
-    for attribute_name, typename in zip(attributes, types_list):
-        with open(output_dir + "/" + attribute_name + ".out") as file:
-            for line in file:
-                if(attribute_name=="matching_strengths"):
-                    data_line = line.split(" ")[:-1]
-                    data_read = list(np.array(data_line).astype(typename))
-                    break
-                elif(attribute_name == "induced_matching"):
-                    data_read.append(int(line))
+    for dim in range(2):
+        for attribute, typename in zip(attributes, types_list):
+            if (attribute=="pm_matrix") and (dim==0) and (not store_0_pm):
+                continue
+            attribute_name = attribute + "_" + str(dim)
+            with open(output_dir + "/" + attribute_name + ".out") as file:
+                for line in file:
+                    if(attribute=="matching_strengths"):
+                        data_line = line.split(" ")[:-1]
+                        data_read = list(np.array(data_line).astype(typename))
+                        break
+                    elif(attribute == "induced_matching"):
+                        data_read.append(int(line))
+                    else:
+                        data_line = line.split(" ")
+                        if (typename=="int"): # lines end with additional space
+                            data_line=data_line[:-1]
+                        data_read.append(list(np.array(data_line).astype(typename)))
+                    # end if else 
+                # end reading file lines 
+                if typename=="float":
+                    output_data[attribute_name] = np.array(data_read)
                 else:
-                    data_line = line.split(" ")
-                    if (typename=="int"): # lines end with additional space
-                        data_line=data_line[:-1]
-                    data_read.append(list(np.array(data_line).astype(typename)))
-                # end if else 
-            # end reading file lines 
-            if typename=="float":
-                output_data[attribute_name] = np.array(data_read)
-            else:
-                output_data[attribute_name] = data_read.copy()
-            # end if-else 
-        # end opening file 
-        data_read.clear()
-    # end saving all attributes 
-    # end for 
+                    output_data[attribute_name] = data_read.copy()
+                # end if-else 
+            # end opening file 
+            data_read.clear()
+        # end saving all attributes 
+        # end for 
+    # Range over dimensions 0 and 1
     return output_data
 # def get_IBloFunMatch_subset
 
-def plot_matching(IBloFunMatch_o, output_dir, ax, fig, max_rad=-1, colorbars=["orange", "aquamarine"], frame_on=False, print_matching=False):
-    X_barcode = IBloFunMatch_o["X_barcode"]
-    S_barcode = IBloFunMatch_o["S_barcode"]
-    X_reps = IBloFunMatch_o["X_reps"]
-    induced_matching = IBloFunMatch_o["induced_matching"]
-    matching_strengths = IBloFunMatch_o["matching_strengths"]
+def plot_matching(IBloFunMatch_o, output_dir, ax, fig, max_rad=-1, colorbars=["orange", "aquamarine"], frame_on=False, print_matching=False, dim=1):
+    X_barcode = IBloFunMatch_o[f"X_barcode_{dim}"]
+    S_barcode = IBloFunMatch_o[f"S_barcode_{dim}"]
+    X_reps = IBloFunMatch_o[f"X_reps_{dim}"]
+    induced_matching = IBloFunMatch_o[f"induced_matching_{dim}"]
+    matching_strengths = IBloFunMatch_o[f"matching_strengths_{dim}"]
     if len(ax)!=2:
         raise ValueError
 
@@ -115,7 +123,7 @@ def plot_matching(IBloFunMatch_o, output_dir, ax, fig, max_rad=-1, colorbars=["o
             xyA=pt_S, coordsA=ax[0].transData, 
             xyB=pt_X, coordsB=ax[1].transData,
             arrowstyle="-", connectionstyle='arc',
-            color="navy", linewidth=2, zorder=4, 
+            color="blue", linewidth=2, zorder=4, 
             alpha = (strength/X_bar[1])
         )
         fig.add_artist(con)
