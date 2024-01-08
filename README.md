@@ -9,21 +9,6 @@ Basic Requirements
 - Make sure you have already installed:
   CGAL, mpfr, gmp and boost
 
-Add local copies of header files from PerMoVec and GUDHI
---------------------------------------------------------
-- Download the "PerMoVEC" bitbucket repository inside the "ext" folder of "IBloFunMatch"
-- Clone the GUDHI repository "https://github.com/GUDHI/gudhi-devel" somewhere in your computer. (*)
-- Take the "Flag_complex_edge_collapser.h" file from the "PerMoVec" folder and substitute the original file 	
-  from (*) located at "include/gudhi/Flag_complex_edge_collapser.h"
-- Take the "include/gudhi" folder from (*) and copy it inside the "ext" folder with the name "gudhi"
-	
-
-Add a copy of PHAT with preimage support 
-----------------------------------------
-- Clone the PHAT repository branch "pm_matrix" (BRANCH NAME IMPORTANT) somewhere in your computer
-- take the "include/phat" folder and copy it inside the "ext" folder from IBloFunMatch with the name "phat"
-
-
 Build IBloFunMatch
 ------------------
 
