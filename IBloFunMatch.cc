@@ -275,23 +275,25 @@ int main(int argc, char* argv[]) {
 	for (int dim = 0; dim < 2; dim++) {
 		// Prepare matrix to reduce 
 		Phat_boundary_matrix red_pm_matrix;
-		std::cout << "Filling red_pm_matrix" << std::endl;
+		std::cout << "Filling red_pm_matrix, dim " << dim << std::endl;
 		Phat_index start_index = X_barcode[dim].size();
 		red_pm_matrix.set_num_cols(start_index + pm_matrix[dim].size());
 		for (Phat_index col_idx = 0; col_idx < pm_matrix[dim].size(); col_idx++) {
 			red_pm_matrix.set_col(start_index + col_idx, pm_matrix[dim][col_idx]);
 		}
-		std::cout << "Filled, printing: " << std::endl;
-		for (Phat_index col_idx = start_index; col_idx < red_pm_matrix.get_num_cols(); col_idx++) {
-			std::vector<Phat_index> column;
-			red_pm_matrix.get_col(col_idx, column);
-			std::cout << col_idx << " : ";
-			for (Phat_index entry : column) {
-				std::cout << entry << " ";
-			}
-			std::cout << std::endl;
-		}
-		std::cout << "Now going to reduce" << std::endl;
+		#ifdef DEBUG_MATCHING
+		    std::cout << "Filled, printing: " << std::endl;
+		    for (Phat_index col_idx = start_index; col_idx < red_pm_matrix.get_num_cols(); col_idx++) {
+		    	std::vector<Phat_index> column;
+		    	red_pm_matrix.get_col(col_idx, column);
+		    	std::cout << col_idx << " : ";
+		    	for (Phat_index entry : column) {
+		    		std::cout << entry << " ";
+		    	}
+		    	std::cout << std::endl;
+		    }
+		    std::cout << "Now going to reduce" << std::endl;
+		#endif
 		// Reduce matrix using PHAT
 		phat::persistence_pairs _pairs;
 		// compute persistent homology by means of the standard reduction

@@ -1,0 +1,6 @@
+TO DO
+- Support for infinity intervals
+- Block Function Computation 
+
+OTHER:
+- Other field characteristics.
