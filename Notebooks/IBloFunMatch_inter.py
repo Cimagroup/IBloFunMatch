@@ -109,7 +109,7 @@ def plot_matching(IBloFunMatch_o, output_dir, ax, fig, max_rad=-1, colorbars=["o
     ax[0].set_ylim([-1, S_barcode.shape[0]])
     ax[1].set_ylim([-1, X_barcode.shape[0]])
     # Limits on x axis depend on value where filtration is "cut"
-    MAX_PLOT_RAD = np.max(X_barcode)*1.1
+    MAX_PLOT_RAD = max(np.max(S_barcode), np.max(X_barcode))*1.1
     if max_rad>=0:
         MAX_PLOT_RAD = max_rad
     ax[0].set_xlim([0, MAX_PLOT_RAD])
@@ -135,7 +135,7 @@ def plot_matching(IBloFunMatch_o, output_dir, ax, fig, max_rad=-1, colorbars=["o
         if strengths:
             alpha = strength/X_bar[1]
         else:
-            alpha = 1
+            alpha = 0.7
         con = mpl.patches.ConnectionPatch(
             xyA=pt_S, coordsA=ax[0].transData, 
             xyB=pt_X, coordsB=ax[1].transData,
