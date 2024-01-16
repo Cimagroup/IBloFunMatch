@@ -26,5 +26,7 @@ endif(DEBUG_STRENGTHS)
 # target_compile_definitions(IBloFunMatch PUBLIC "DEBUG_STRENGTHS")
 
 # Save executable path into file
-file(WRITE exe_path.txt ${CMAKE_BINARY_DIR})
-file(APPEND exe_path.txt "/IBloFunMatch")
+# file(WRITE exe_path.txt ${CMAKE_BINARY_DIR})
+# file(APPEND exe_path.txt "/IBloFunMatch")
+
+file(GENERATE OUTPUT "${CMAKE_CURRENT_SOURCE_DIR}/exe_path_$<CONFIG>.txt" CONTENT "$<TARGET_FILE:IBloFunMatch>")

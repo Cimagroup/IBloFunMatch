@@ -3,13 +3,13 @@ import numpy as np
 import matplotlib as mpl
 
 # Read executable path from cmake-generated file 
-with open("../exe_path.txt") as f:
+with open("../exe_path_Debug.txt") as f:
     EXECUTABLE_PATH = f.readline()
 
 print(f"EXECUTABLE_PATH: {EXECUTABLE_PATH}")
 
-attributes = ["X_barcode", "S_barcode", "X_reps", "S_reps", "S_reps_im", "pm_matrix", "induced_matching", "matching_strengths"]
-types_list = ["float", "float", "int", "int", "int", "int", "int", "float"]
+attributes = ["X_barcode", "S_barcode", "X_reps", "S_reps", "S_reps_im", "pm_matrix", "induced_matching", "matching_strengths", "block_function"]
+types_list = ["float", "float", "int", "int", "int", "int", "int", "float", "int"]
 
 def get_IBloFunMatch_subset(Dist_S, Dist_X, idS, output_dir, max_rad=-1, num_it=1, store_0_pm=False, points=False):
     # Buffer files to write subsets and classes for communicating with C++ program 
@@ -57,6 +57,8 @@ def get_IBloFunMatch_subset(Dist_S, Dist_X, idS, output_dir, max_rad=-1, num_it=
                         break
                     elif(attribute == "induced_matching"):
                         data_read.append(int(line))
+                    elif(attribute == "block_function"):
+                        data_read.append(int(line))
                     else:
                         data_line = line.split(" ")
                         if (typename=="int"): # lines end with additional space
@@ -77,21 +79,26 @@ def get_IBloFunMatch_subset(Dist_S, Dist_X, idS, output_dir, max_rad=-1, num_it=
     return output_data
 # def get_IBloFunMatch_subset
 
-def plot_matching(IBloFunMatch_o, output_dir, ax, fig, max_rad=-1, colorbars=["orange", "aquamarine"], frame_on=False, print_matching=False, dim=1):
+def plot_matching(IBloFunMatch_o, output_dir, ax, fig, max_rad=-1, colorbars=["orange", "aquamarine"], frame_on=False, print_matching=False, dim=1, strengths=True, block_function=False):
+    if block_function:
+        strengths=False
     X_barcode = IBloFunMatch_o[f"X_barcode_{dim}"]
     S_barcode = IBloFunMatch_o[f"S_barcode_{dim}"]
     X_reps = IBloFunMatch_o[f"X_reps_{dim}"]
-    induced_matching = IBloFunMatch_o[f"induced_matching_{dim}"]
+    if block_function:
+        matching = IBloFunMatch_o[f"block_function_{dim}"]
+    else:
+        matching = IBloFunMatch_o[f"induced_matching_{dim}"]
+    
     matching_strengths = IBloFunMatch_o[f"matching_strengths_{dim}"]
+        
     if len(ax)!=2:
         raise ValueError
 
     lw_S, lw_X = 100/len(S_barcode), 100/len(X_barcode)
     for idx, bar in enumerate(S_barcode):
-        # ax[0].plot([bar[0], bar[1]], [idx, idx], c="orange", linewidth=lw_S, zorder=1)
         ax[0].add_patch(mpl.patches.Rectangle([bar[0], idx-0.2], (bar[1]-bar[0]), 0.4, color=colorbars[0], zorder=1))
     for idx, bar in enumerate(X_barcode):
-        # ax[1].plot([bar[0], bar[1]], [idx, idx], c="aquamarine", linewidth=lw_X, zorder=1)
         ax[1].add_patch(mpl.patches.Rectangle([bar[0], idx-0.2], (bar[1]-bar[0]), 0.4, color=colorbars[1], zorder=1))
 
     for ax_it in ax:
@@ -109,7 +116,7 @@ def plot_matching(IBloFunMatch_o, output_dir, ax, fig, max_rad=-1, colorbars=["o
     ax[1].set_xlim([0, MAX_PLOT_RAD])
 
     # Plot Partial Matching
-    for idx, idx_match in enumerate(induced_matching):
+    for idx, idx_match in enumerate(matching):
         if idx_match==-1:
             continue
         S_bar = S_barcode[idx]
@@ -120,19 +127,21 @@ def plot_matching(IBloFunMatch_o, output_dir, ax, fig, max_rad=-1, colorbars=["o
         if print_matching:
             print(f"{S_bar} <--> {X_bar}, strength: {strength:.3f}")
         # Highlight matched bar sections 
-        # ax[0].plot([S_bar[0], X_bar[1]], [idx, idx], c="navy", linewidth=lw_S, zorder=2, alpha=0.5)
         ax[0].add_patch(mpl.patches.Rectangle([S_bar[0], idx-0.2], (X_bar[1]-S_bar[0]), 0.4, color="navy", zorder=2))
-        # ax[1].plot([S_bar[0], X_bar[1]], [idx_match, idx_match], c="navy", linewidth=lw_X, zorder=2, alpha=0.5)
         ax[1].add_patch(mpl.patches.Rectangle([S_bar[0], idx_match-0.2], (X_bar[1]-S_bar[0]), 0.4, color="navy", zorder=2))
         # Plot matchings
         pt_S = [S_bar[1], idx]
         pt_X = [X_bar[0], idx_match]
+        if strengths:
+            alpha = strength/X_bar[1]
+        else:
+            alpha = 1
         con = mpl.patches.ConnectionPatch(
             xyA=pt_S, coordsA=ax[0].transData, 
             xyB=pt_X, coordsB=ax[1].transData,
             arrowstyle="-", connectionstyle='arc',
             color="blue", linewidth=2, zorder=4, 
-            alpha = (strength/X_bar[1])
+            alpha = alpha
         )
         fig.add_artist(con)
     # end for

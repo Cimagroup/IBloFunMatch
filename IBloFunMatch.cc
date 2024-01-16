@@ -320,9 +320,61 @@ int main(int argc, char* argv[]) {
 		out_ind_match.close();
 	} // compute induced matching on dimensions 0 and 1
 	
+	//----------------------------------------------------------------
+	// COMPUTE INDUCED BLOCK FUNCTION 
+	//----------------------------------------------------------------
+	std::cout << "Computing block function" << std::endl;
+	// Basically, reduce associated matrix for each column, containing only the columns 
+	// that come just before
+	std::vector<std::vector<Phat_index>> block_fun_dim;
+	for (int dim = 0; dim < 2; dim++) {
+		// Value of -1 means that there is no assignment 
+		std::vector<Phat_index> block_fun(pm_matrix[dim].size(), -1);
+		Phat_index start_index = X_barcode[dim].size();
+		Phat_index num_columns = start_index + pm_matrix[dim].size();
+		Phat_boundary_matrix red_pm_matrix_I2;
+		red_pm_matrix_I2.set_num_cols(num_columns);
+		for (Phat_index i = start_index; i < num_columns; i++) {
+			Interval I2 = S_barcode[dim].at(i - start_index);
+			// Fill columns up to the column i
+			for (Phat_index j = start_index; j <= i; j++) {
+				Interval I1 = S_barcode[dim].at(j - start_index);
+				// Fill column if associated interval comes first (in both endpoints)
+				if ((I1.first <= I2.first) && (I1.second <= I2.second)) {
+					red_pm_matrix_I2.set_col(j, pm_matrix[dim][j - start_index]);
+				}
+				else { // otherwise clear the column
+					red_pm_matrix_I2.clear(j); 
+				}
+			}
+			// Reduce matrix using PHAT
+			phat::persistence_pairs _pairs;
+			// compute persistent homology by means of the standard reduction
+			phat::compute_persistence_pairs<phat::standard_reduction>(_pairs, red_pm_matrix_I2);
+			// Read pivot from column "i"
+			std::vector<Phat_index> column;
+			red_pm_matrix_I2.get_col(i, column);
+			if (column.size() > 0) {
+				block_fun[i - start_index] = column.back();
+			}
+		}
+		// Store induced matching into variable
+		block_fun_dim.push_back(block_fun);
+		// Store induced matching into file 
+		std::string block_fun_f = "output/block_function_" + std::to_string(dim) + ".out";
+		std::ofstream out_block_fun(block_fun_f);
+		for (Phat_index idx_match : block_fun) {
+			out_block_fun << idx_match << std::endl;
+		}
+		out_block_fun.close();
+	} // compute block function in dimensions 0 and 1
+
 	// ---------------------------------------------------------------------------------//
-	// Compute Matching Strength 
+	// Compute Induced Matching Strength 
 	// ---------------------------------------------------------------------------------//
+	// This can be put into another function so that the strenghts from the induced block function 
+	// are also computed without repeating the code
+	std::cout << "Computing strenghts..." << std::endl;
 	// ------------------------------------ DIMENSION 0 ---------------------------------
 	std::ofstream out_match_strength("output/matching_strengths_0.out");
 	for (idx_S = 0; idx_S < induced_matching_dim[0].size(); idx_S++) {
@@ -341,7 +393,6 @@ int main(int argc, char* argv[]) {
 
 	// ------------------------------------ DIMENSION 1 ---------------------------------
 	std::vector<double> matching_strengths;
-	std::cout << "Computing strenghts..." << std::endl;
 	for (idx_S = 0; idx_S < induced_matching_dim[1].size(); idx_S++) {
 		// First compute the matched image interval length
 		size_t idx_match = induced_matching_dim[1][idx_S];
@@ -499,6 +550,7 @@ int main(int argc, char* argv[]) {
 	out_match_strength << std::endl;
 	out_match_strength.close();
 	// Now compute other quantities 
+	std::cout << "finished" << std::endl;
 	return 0;
 } // End main
 
