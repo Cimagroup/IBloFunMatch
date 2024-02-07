@@ -34,3 +34,10 @@ exe_path*.txt
 
 # Some datasets to ignore
 iris_matching_datasets/
+
+# COIL 20 dataset
+Notebooks/coil-20-proc
+Notebooks/data_COIL20
+Notebooks/plots
+Notebooks/archive
+*.zip

@@ -41,7 +41,7 @@ def get_IBloFunMatch_subset(Dist_S, Dist_X, idS, output_dir, max_rad=-1, num_it=
         extra_flags += " -c true "
     # only if we want to store the 0 dimensional pm matrix
 
-    os.system(EXECUTABLE_PATH + " " + f_dist_S + " " + f_dist_X + " " + f_ind_sampl + " -d 2 " + extra_flags )
+    os.system(EXECUTABLE_PATH + " " + f_dist_S + " " + f_dist_X + " " + f_ind_sampl + " -d 2 " + " -o " + output_dir + extra_flags )
     # Save barcodes and representatives reading them from output files
     data_read = []
     for dim in range(2):

@@ -56,7 +56,7 @@ using Distance_matrix = std::vector<std::vector<Filtration_value>>;
 
 
 void program_options(
-	int argc, char* argv[], std::string& file_S_dist, std::string& file_X_dist, std::string& file_sample_indices,
+	int argc, char* argv[], std::string& file_S_dist, std::string& file_X_dist, std::string& file_sample_indices, std::string& folder_io,
 	Filtration_value& threshold, int& dim_max, int& edge_collapse_iter_nb, bool& print_0_pm, bool& coordinate_input
 );
 
@@ -81,14 +81,14 @@ int main(int argc, char* argv[]) {
 	// READ DATA distance matrices (or coordinates) and other options
 	// ------------------------------------------------------------------------
 	// Read arguments and distance matrix locations
-	std::string file_S_dist, file_X_dist, file_sample_indices;
+	std::string file_S_dist, file_X_dist, file_sample_indices, folder_io;
 	Filtration_value threshold;
 	int dim_max;
 	int edge_collapse_iter_nb;
 	bool print_0_pm, coordinate_input;
 
 	program_options(
-		argc, argv, file_S_dist, file_X_dist, file_sample_indices,
+		argc, argv, file_S_dist, file_X_dist, file_sample_indices, folder_io,
 		threshold, dim_max, edge_collapse_iter_nb, print_0_pm, coordinate_input
 	);
 	// ------------------------------------------------------------------------
@@ -265,7 +265,7 @@ int main(int argc, char* argv[]) {
 	sort_endpoint(X_barcode[1], std::get<1>(X_reps), pm_matrix[1]);
 
 	// Save permovec output into files (for dimensions 0 and 1)
-	store_permovec_output(S_barcode, S_reps, S_reps_im, X_barcode, X_reps, pm_matrix, sample_indices, print_0_pm);
+	store_permovec_output(S_barcode, S_reps, S_reps_im, X_barcode, X_reps, pm_matrix, sample_indices, print_0_pm, folder_io);
 	
 	//----------------------------------------------------------------
 	// COMPUTE INDUCED MATCHING 
@@ -312,7 +312,7 @@ int main(int argc, char* argv[]) {
 		// Store induced matching into variable
 		induced_matching_dim.push_back(induced_matching);
 		// Store induced matching into file 
-		std::string ind_match_f = "output/induced_matching_" + std::to_string(dim) + ".out";
+		std::string ind_match_f = folder_io + "/induced_matching_" + std::to_string(dim) + ".out";
 		std::ofstream out_ind_match(ind_match_f);
 		for (Phat_index idx_match : induced_matching) {
 			out_ind_match << idx_match << std::endl;
@@ -361,7 +361,7 @@ int main(int argc, char* argv[]) {
 		// Store induced matching into variable
 		block_fun_dim.push_back(block_fun);
 		// Store induced matching into file 
-		std::string block_fun_f = "output/block_function_" + std::to_string(dim) + ".out";
+		std::string block_fun_f = folder_io + "/block_function_" + std::to_string(dim) + ".out";
 		std::ofstream out_block_fun(block_fun_f);
 		for (Phat_index idx_match : block_fun) {
 			out_block_fun << idx_match << std::endl;
@@ -376,7 +376,7 @@ int main(int argc, char* argv[]) {
 	// are also computed without repeating the code
 	std::cout << "Computing strenghts..." << std::endl;
 	// ------------------------------------ DIMENSION 0 ---------------------------------
-	std::ofstream out_match_strength("output/matching_strengths_0.out");
+	std::ofstream out_match_strength(folder_io + "/matching_strengths_0.out");
 	for (idx_S = 0; idx_S < induced_matching_dim[0].size(); idx_S++) {
 		// First compute the matched image interval length
 		size_t idx_match = induced_matching_dim[0][idx_S];
@@ -543,7 +543,7 @@ int main(int argc, char* argv[]) {
 		matching_strengths.push_back(std::min(im_len, std::min(min_comp_S, min_comp_X)));
 	} // Compute matching strenghts over each bar
 	// Store matching strengths into file 
-	out_match_strength.open("output/matching_strengths_1.out");
+	out_match_strength.open(folder_io + "/matching_strengths_1.out");
 	for (double strength_m : matching_strengths) {
 		out_match_strength << strength_m << " ";
 	}
@@ -679,7 +679,7 @@ void merge_distances(
 } // end of merge_distances
 
 void program_options(
-	int argc, char* argv[], std::string& file_S_dist, std::string& file_X_dist, std::string& file_sample_indices,
+	int argc, char* argv[], std::string& file_S_dist, std::string& file_X_dist, std::string& file_sample_indices, std::string& folder_io,
 	Filtration_value& threshold, int& dim_max, int& edge_collapse_iter_nb, bool& print_0_pm, bool& coordinate_input
 ) {
 	namespace po = boost::program_options;
@@ -711,6 +711,9 @@ void program_options(
 		)(
 		"coordinate-input,c", po::value<bool>(&coordinate_input)->default_value(false),
 		"Whether the input are coordinates of the dataset."
+		)(
+		"folder-io,o", po::value<std::string>(&folder_io)->default_value("output"),
+		"Folder to read and write."
 	);
 
 	po::positional_options_description pos;

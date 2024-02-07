@@ -1,23 +1,5 @@
 /* Vietoris-Rips persistence morphism matrix.
-* 
-* Copyright © 2024 Alvaro Torras Casas
-*
-* Permission is hereby granted, free of charge, to any person obtaining a 
-* copy of this software and associated documentation files (the “Software”), 
-* to deal in the Software without restriction, including without limitation 
-* the rights to use, copy, modify, merge, publish, distribute, sublicense, 
-* and/or sell copies of the Software, and to permit persons to whom the Software 
-* is furnished to do so, subject to the following conditions:
-* 
-* The above copyright notice and this permission notice shall be included in all 
-* copies or substantial portions of the Software.
-* 
-* THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, 
-* INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR 
-* PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE 
-* FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR 
-* OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER 
-* DEALINGS IN THE SOFTWARE.
+* Copyright (C) Alvaro Torras Casas (2023)
 *
 * Consider a point cloud X together with a sample S.
 * This program computes the associated matrix to the
@@ -425,11 +407,12 @@ void store_permovec_output(
     Reps_dim& X_reps,
     Matrix_dim& pm_matrix_dim,
     std::vector<size_t>& sample_indices,
-    bool& print_0_pm
+    bool& print_0_pm,
+    std::string& folder_io
 ) {
     for (int dim = 0; dim < 2; dim++) {
         // Save domain barcode
-        std::string Sbarcode_f = "output/S_barcode_" + std::to_string(dim) + ".out";
+        std::string Sbarcode_f = folder_io + "/S_barcode_" + std::to_string(dim) + ".out";
         std::ofstream out_S_bar(Sbarcode_f);
         for (Interval bar : S_barcode[dim]) {
             out_S_bar << bar.first << " " << bar.second << std::endl;
@@ -437,7 +420,7 @@ void store_permovec_output(
         out_S_bar.close();
         // Save codomain barcode
         std::cout << "Length X_barcode[" << dim << "]: " << X_barcode[dim].size() << std::endl;
-        std::string Xbarcode_f = "output/X_barcode_" + std::to_string(dim) + ".out";
+        std::string Xbarcode_f = folder_io + "/X_barcode_" + std::to_string(dim) + ".out";
         std::ofstream out_X_bar(Xbarcode_f);
         for (Interval bar : X_barcode[dim]) {
             out_X_bar << bar.first << " " << bar.second << std::endl;
@@ -448,7 +431,7 @@ void store_permovec_output(
             continue;
         }
         // Save persistence morphism matrix
-        std::string pm_matrix_f = "output/pm_matrix_" + std::to_string(dim) + ".out";
+        std::string pm_matrix_f = folder_io + "/pm_matrix_" + std::to_string(dim) + ".out";
         std::ofstream out_pm_matrix(pm_matrix_f);
         for (std::vector<Phat_index>& column : pm_matrix_dim[dim]) {
             for (Phat_index entry : column) {
@@ -462,7 +445,7 @@ void store_permovec_output(
     // ------------------------------------------------------------------------
     // Print 0 dim reps
     // ------------------------------------------------------------------------
-    std::string Xreps_f = "output/X_reps_0.out";
+    std::string Xreps_f = folder_io + "/X_reps_0.out";
     std::ofstream out_X_reps(Xreps_f);
     for (auto& cycle_rep : std::get<0>(X_reps)) {
         for (Phat_index idx : cycle_rep) {
@@ -472,7 +455,7 @@ void store_permovec_output(
     }
     out_X_reps.close();
     // Save domain representatives
-    std::string Sreps_f = "output/S_reps_0.out";
+    std::string Sreps_f = folder_io + "/S_reps_0.out";
     std::ofstream out_S_reps(Sreps_f);
     for (auto& cycle_rep : std::get<0>(S_reps)) {
         for (Phat_index idx : cycle_rep) {
@@ -482,7 +465,7 @@ void store_permovec_output(
     }
     out_S_reps.close();
     // Save image reps
-    std::string Sreps_im_f = "output/S_reps_im_0.out";
+    std::string Sreps_im_f = folder_io + "/S_reps_im_0.out";
     std::ofstream out_S_reps_im(Sreps_im_f);
     for (auto& cycle_rep : std::get<0>(S_reps_im)) {
         for (Phat_index idx : cycle_rep) {
@@ -494,7 +477,7 @@ void store_permovec_output(
     // ------------------------------------------------------------------------
     // Print 1 dim reps
     // ------------------------------------------------------------------------
-    Xreps_f = "output/X_reps_1.out";
+    Xreps_f = folder_io + "/X_reps_1.out";
     out_X_reps.open(Xreps_f);
     for (auto& cycle_rep : std::get<1>(X_reps)) {
         for (Vertex_pair edge : cycle_rep) {
@@ -504,7 +487,7 @@ void store_permovec_output(
     }
     out_X_reps.close();
     // Save domain representatives
-    Sreps_f = "output/S_reps_1.out";
+    Sreps_f = folder_io + "/S_reps_1.out";
     out_S_reps.open(Sreps_f);
     for (auto& cycle_rep : std::get<1>(S_reps)) {
         for (Vertex_pair edge : cycle_rep) {
@@ -514,7 +497,7 @@ void store_permovec_output(
     }
     out_S_reps.close();
     // Save image reps
-    Sreps_im_f = "output/S_reps_im_1.out";
+    Sreps_im_f = folder_io + "/S_reps_im_1.out";
     out_S_reps_im.open(Sreps_im_f);
     for (auto& cycle_rep : std::get<1>(S_reps_im)) {
         for (Vertex_pair edge : cycle_rep) {
