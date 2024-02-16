@@ -34,7 +34,9 @@ void sort_startpoint(
 	for (size_t idx = 0; idx < barcode.size(); idx++) {
 		sort_indices.push_back(idx);
 	}
-	std::cout << "sortstart: created indices" << std::endl;
+	#ifdef DEBUG_SORT
+		std::cout << "sortstart: created indices" << std::endl;
+	#endif
 	// Sort indices following the startpoint order
 	std::sort(
 		sort_indices.begin(), sort_indices.end(),
@@ -44,7 +46,9 @@ void sort_startpoint(
 				);
 		}
 	);
-	std::cout << "sortstart: sorted indices" << std::endl;
+	#ifdef DEBUG_SORT
+		std::cout << "sortstart: sorted indices" << std::endl;
+	#endif
 	// Sort the cycle representatives from the barcode and the image
 	// Also, sort the columns from the persistence morphism matrix
 	std::vector<Interval> sorted_barcode;
@@ -52,15 +56,19 @@ void sort_startpoint(
 	std::vector<CR> sorted_cycle_im;
 	std::vector<std::vector<Phat_index>> sorted_matrix;
 	for (size_t idx : sort_indices) {
-		std::cout << idx << " ";
-		std::cout << barcode.size() << " " << cycles.size() << " " << cycles_im.size() << " " << pm_matrix.size() << std::endl;
+		#ifdef DEBUG_SORT
+			std::cout << idx << " ";
+			std::cout << barcode.size() << " " << cycles.size() << " " << cycles_im.size() << " " << pm_matrix.size() << std::endl;
+		#endif
 		sorted_barcode.push_back(barcode.at(idx));
 		sorted_cycle.push_back(cycles.at(idx));
 		sorted_cycle_im.push_back(cycles_im.at(idx));
 		sorted_matrix.push_back(pm_matrix.at(idx));
 
 	}
-	std::cout << "sortstart: sorted content" << std::endl;
+	#ifdef DEBUG_SORT
+		std::cout << "sortstart: sorted content" << std::endl;
+	#endif
 	barcode = sorted_barcode;
 	cycles = sorted_cycle;
 	cycles_im = sorted_cycle_im;

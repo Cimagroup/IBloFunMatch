@@ -212,7 +212,9 @@ void pairs_and_matrix_VR(
       diff_mat_X.get_col(col_idx, temp_col);
       cycle_reduction_mat.set_col(col_idx, temp_col);
   }
-  std::cout << "Cycle columns image: " << std::endl;
+  #ifdef DEBUG
+    std::cout << "Cycle columns image: " << std::endl;
+  #endif
   // Append image cycles in dimension 0
   Phat_index col_count=diff_mat_X.get_num_cols();
   for (Phat_column im_rep : std::get<0>(S_reps_im)) {
@@ -241,14 +243,18 @@ void pairs_and_matrix_VR(
   phat::persistence_pairs _ignore_pairs;
   phat::compute_persistence_pairs<phat::standard_reduction>(_ignore_pairs, cycle_reduction_mat);
   // Check that all image cycles have been reduced to 0
-  std::cout << "Checking zero columns:" << std::endl;
+  #ifdef DEBUG
+    std::cout << "Checking zero columns:" << std::endl;
+  #endif
   for(Phat_index col_idx = diff_mat_X.get_num_cols(); col_idx<cycle_reduction_mat.get_num_cols(); col_idx++){
       assert(cycle_reduction_mat.is_empty(col_idx));
   }
   // Use preimages to deduce the persistence morphism matrices in dimensions 0 and 1
   col_count = diff_mat_X.get_num_cols();
   for (int dim = 0; dim < 2; dim++) {
-      std::cout << dim << " PM_matrix:" << std::endl;
+      #ifdef DEBUG
+        std::cout << dim << " PM_matrix:" << std::endl;
+      #endif
       std::vector<Phat_index> X_cycle_cols = X_cycle_cols_dim[dim];
       std::vector<std::vector<Phat_index>> pm_matrix;
       auto int_S = S_barcode[dim].begin();
@@ -272,15 +278,19 @@ void pairs_and_matrix_VR(
                   }
               }
           }
-          for (Phat_index entry : cycle_coord) {
-              std::cout << entry << ", ";
-          }
-          std::cout << std::endl;
+          #ifdef DEBUG
+            for (Phat_index entry : cycle_coord) {
+                std::cout << entry << ", ";
+            }
+            std::cout << std::endl;
+          #endif
           pm_matrix.push_back(cycle_coord);
           int_S++;
           col_count++;
       }
-      std::cout << "PM_matrix end" << std::endl;
+      #ifdef DEBUG
+        std::cout << "PM_matrix end" << std::endl;
+      #endif
       pm_matrix_dim[dim] = pm_matrix;
   } // for dim=0,1
 } // pairs_and_matrix_VR
@@ -419,7 +429,9 @@ void store_permovec_output(
         }
         out_S_bar.close();
         // Save codomain barcode
-        std::cout << "Length X_barcode[" << dim << "]: " << X_barcode[dim].size() << std::endl;
+        #ifdef DEBUG
+            std::cout << "Length X_barcode[" << dim << "]: " << X_barcode[dim].size() << std::endl;
+        #endif
         std::string Xbarcode_f = folder_io + "/X_barcode_" + std::to_string(dim) + ".out";
         std::ofstream out_X_bar(Xbarcode_f);
         for (Interval bar : X_barcode[dim]) {

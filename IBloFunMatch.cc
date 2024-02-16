@@ -121,7 +121,9 @@ int main(int argc, char* argv[]) {
 		sample_indices_sort.push_back(sample_indices[idx]);
 	}
 	sample_indices = sample_indices_sort;
-	std::cout << "sorted sample indices, total: " << sample_indices.size() << std::endl;
+	#ifdef DEBUG
+		std::cout << "sorted sample indices, total: " << sample_indices.size() << std::endl;
+	#endif
 
 	// ------------------------------------------------------------------------
 	// DISTANCE MATRIX INPUT
@@ -131,12 +133,16 @@ int main(int argc, char* argv[]) {
 	size_t size_X;
 	if (!coordinate_input) {
 		// Read Distance Matrices 
-		std::cout << "Reading distance Matrices." << std::endl;
+		#ifdef DEBUG
+			std::cout << "Reading distance Matrices." << std::endl;
+		#endif
 		Distance_matrix dist_S = Gudhi::read_lower_triangular_matrix_from_csv_file<Filtration_value>(file_S_dist, ' ');
 		Distance_matrix dist_X = Gudhi::read_lower_triangular_matrix_from_csv_file<Filtration_value>(file_X_dist, ' ');
 		// Store size of X 
 		size_X = dist_X.size();
-		std::cout << "Finished reading matrices and sample indices." << std::endl;
+		#ifdef DEBUG
+			std::cout << "Finished reading matrices and sample indices." << std::endl;
+		#endif
 		// -------------- Sort subset distance matrix "dist_S" according to new order---------------//
 		Distance_matrix dist_S_sort;
 		for (size_t row_idx = 0; row_idx < order_sample.size(); row_idx++) {
@@ -154,9 +160,13 @@ int main(int argc, char* argv[]) {
 			dist_S_sort.push_back(row);
 		}
 		dist_S = dist_S_sort;
-		std::cout << "sorted S according to new order" << std::endl;
+		#ifdef DEBUG
+			std::cout << "sorted S according to new order" << std::endl;
+		#endif
 		// -------------------- Check that input is valid (if necessary)----------------------------------//
-		std::cout << "stored new sorted distance matrix" << std::endl;
+		#ifdef DEBUG
+			std::cout << "stored new sorted distance matrix" << std::endl;
+		#endif
 		if (!coordinate_input) {
 			// Check that distances from S are greater than those from X 
 			for (size_t row_idx = 0; row_idx < sample_indices.size(); row_idx++) {
@@ -164,7 +174,9 @@ int main(int argc, char* argv[]) {
 					assert(dist_S[row_idx][col_idx] >= dist_X[sample_indices[row_idx]][sample_indices[col_idx]]);
 				}
 			}
-			std::cout << "Correctly checked inequality on dist_S and dist_X" << std::endl;
+			#ifdef DEBUG
+				std::cout << "Correctly checked inequality on dist_S and dist_X" << std::endl;
+			#endif
 		}
 		// -------------------- Compute proximity graphs  ---------------------------// 
 		graph_S = Gudhi::compute_proximity_graph<Simplex_tree>(
@@ -247,21 +259,19 @@ int main(int argc, char* argv[]) {
 		X_barcode, X_reps,
 		pm_matrix
 	);
-	std::cout << "Returned from PerMoVEC" << std::endl;
+	#ifdef DEBUG
+		std::cout << "Returned from PerMoVEC" << std::endl;
+	#endif
 	// ---------------------------------------------------------------------------
 	// Sort permovec output according to startpoint and endpoitn order and store into files
 	// ---------------------------------------------------------------------------
 	// In dimensions 0 and 1
 	// Sort S_barcode, S_reps, S_reps_im and columns from pm_matrix 
 	// by following the "startpoint order" 
-	std::cout << "Sorting startpoint 0" << std::endl;
 	sort_startpoint(S_barcode[0], std::get<0>(S_reps), std::get<0>(S_reps_im), pm_matrix[0]);
-	std::cout << "Sorting startpoint 1" << std::endl;
 	sort_startpoint(S_barcode[1], std::get<1>(S_reps), std::get<1>(S_reps_im), pm_matrix[1]);
 	// Do the same on X by following the endpoint order 
-	std::cout << "Sorting endpoint 0" << std::endl;
 	sort_endpoint(X_barcode[0], std::get<0>(X_reps), pm_matrix[0]);
-	std::cout << "Sorting endpoint 1" << std::endl;
 	sort_endpoint(X_barcode[1], std::get<1>(X_reps), pm_matrix[1]);
 
 	// Save permovec output into files (for dimensions 0 and 1)
@@ -271,11 +281,9 @@ int main(int argc, char* argv[]) {
 	// COMPUTE INDUCED MATCHING 
 	//----------------------------------------------------------------
 	std::vector<std::vector<Phat_index>> induced_matching_dim;
-	std::cout << "Ready to compute the induced matchings" << std::endl;
 	for (int dim = 0; dim < 2; dim++) {
 		// Prepare matrix to reduce 
 		Phat_boundary_matrix red_pm_matrix;
-		std::cout << "Filling red_pm_matrix, dim " << dim << std::endl;
 		Phat_index start_index = X_barcode[dim].size();
 		red_pm_matrix.set_num_cols(start_index + pm_matrix[dim].size());
 		for (Phat_index col_idx = 0; col_idx < pm_matrix[dim].size(); col_idx++) {
@@ -299,7 +307,6 @@ int main(int argc, char* argv[]) {
 		// compute persistent homology by means of the standard reduction
 		phat::compute_persistence_pairs<phat::standard_reduction>(_pairs, red_pm_matrix);
 		// Read column pivots and store into matching 
-		std::cout << "Reduced" << std::endl;
 		// Value of -1 means that there is no matching 
 		std::vector<Phat_index> induced_matching(pm_matrix[dim].size(), -1);
 		for (Phat_index col_idx = start_index; col_idx < red_pm_matrix.get_num_cols(); col_idx++) {
@@ -323,7 +330,9 @@ int main(int argc, char* argv[]) {
 	//----------------------------------------------------------------
 	// COMPUTE INDUCED BLOCK FUNCTION 
 	//----------------------------------------------------------------
-	std::cout << "Computing block function" << std::endl;
+	#ifdef DEBUG
+		std::cout << "Computing block function" << std::endl;
+	#endif
 	// Basically, reduce associated matrix for each column, containing only the columns 
 	// that come just before
 	std::vector<std::vector<Phat_index>> block_fun_dim;
@@ -374,7 +383,9 @@ int main(int argc, char* argv[]) {
 	// ---------------------------------------------------------------------------------//
 	// This can be put into another function so that the strenghts from the induced block function 
 	// are also computed without repeating the code
-	std::cout << "Computing strenghts..." << std::endl;
+	#ifdef DEBUG
+		std::cout << "Computing strenghts..." << std::endl;
+	#endif
 	// ------------------------------------ DIMENSION 0 ---------------------------------
 	std::ofstream out_match_strength(folder_io + "/matching_strengths_0.out");
 	for (idx_S = 0; idx_S < induced_matching_dim[0].size(); idx_S++) {
@@ -397,7 +408,6 @@ int main(int argc, char* argv[]) {
 		// First compute the matched image interval length
 		size_t idx_match = induced_matching_dim[1][idx_S];
 		if ((idx_match < 0)||(idx_match>=X_barcode[1].size())) { // check it is a proper matching
-			std::cout << "idx_S: " << idx_S << " (not matched)" << std::endl << std::endl;
 			matching_strengths.push_back(-1);
 			continue;
 		}
@@ -550,7 +560,8 @@ int main(int argc, char* argv[]) {
 	out_match_strength << std::endl;
 	out_match_strength.close();
 	// Now compute other quantities 
-	std::cout << "finished" << std::endl;
+	// Block Strenghts 1
+	std::vector<double> block_strengths;
 	return 0;
 } // End main
 

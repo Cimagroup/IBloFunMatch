@@ -79,7 +79,7 @@ def get_IBloFunMatch_subset(Dist_S, Dist_X, idS, output_dir, max_rad=-1, num_it=
     return output_data
 # def get_IBloFunMatch_subset
 
-def plot_matching(IBloFunMatch_o, output_dir, ax, fig, max_rad=-1, colorbars=["orange", "aquamarine"], frame_on=False, print_matching=False, dim=1, strengths=True, block_function=False):
+def plot_matching(IBloFunMatch_o, ax, fig, max_rad=-1, colorbars=["orange", "aquamarine", "red"], frame_on=False, print_matching=False, dim=1, strengths=True, block_function=False, codomain_int=[]):
     if block_function:
         strengths=False
     X_barcode = IBloFunMatch_o[f"X_barcode_{dim}"]
@@ -93,13 +93,17 @@ def plot_matching(IBloFunMatch_o, output_dir, ax, fig, max_rad=-1, colorbars=["o
     matching_strengths = IBloFunMatch_o[f"matching_strengths_{dim}"]
         
     if len(ax)!=2:
+        print(f"ERROR: len(ax) should be 2 but it is {len(ax)}")
         raise ValueError
 
     lw_S, lw_X = 100/len(S_barcode), 100/len(X_barcode)
     for idx, bar in enumerate(S_barcode):
         ax[0].add_patch(mpl.patches.Rectangle([bar[0], idx-0.2], (bar[1]-bar[0]), 0.4, color=colorbars[0], zorder=1))
     for idx, bar in enumerate(X_barcode):
-        ax[1].add_patch(mpl.patches.Rectangle([bar[0], idx-0.2], (bar[1]-bar[0]), 0.4, color=colorbars[1], zorder=1))
+        if idx in codomain_int:
+            ax[1].add_patch(mpl.patches.Rectangle([bar[0], idx-0.2], (bar[1]-bar[0]), 0.4, color=colorbars[2], zorder=1))
+        else:
+            ax[1].add_patch(mpl.patches.Rectangle([bar[0], idx-0.2], (bar[1]-bar[0]), 0.4, color=colorbars[1], zorder=1))
 
     for ax_it in ax:
         ax_it.set_frame_on(frame_on)
@@ -146,6 +150,21 @@ def plot_matching(IBloFunMatch_o, output_dir, ax, fig, max_rad=-1, colorbars=["o
         fig.add_artist(con)
     # end for
 # end  def plot_matchi
+
+def plot_barcode(barcode, color, ax):
+    lw = 100/len(barcode)
+    for idx, bar in enumerate(barcode):
+        ax.add_patch(mpl.patches.Rectangle([bar[0], idx-0.2], (bar[1]-bar[0]), 0.4, color=color, zorder=1))
+
+    ax.set_yticks([])
+
+    # Limits barcode diagrams on y axis
+    ax.set_ylim([-1, barcode.shape[0]])
+    # Limits on x axis depend on value where filtration is "cut"
+    MAX_PLOT_RAD = np.max(barcode)*1.1
+    
+    ax.set_xlim([0, MAX_PLOT_RAD])
+# end  plot barcode
 
 def sampled_circle(r, R, n, RandGen):
     assert r<=R
