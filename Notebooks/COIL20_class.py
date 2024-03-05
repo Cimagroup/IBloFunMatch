@@ -26,13 +26,12 @@ def main():
     # Read COIL-20 dataset
     #################################################
     # classes_coil = list(range(20))
-    classes_coil = range(2) # [0, 4] # 5 missing
+    classes_coil = [0,1] # list(range(2)) # [0, 4, 5]
     num_exp = 10
     # num_exp = 20
     # num_class = 20
     num_samples = 72
-    # data_percent = 0.4
-    data_percent = 0.5
+    data_percent = 0.4
     subset_size = int(num_samples*data_percent)
     print(f"subset_size:{subset_size}")
     y = []
@@ -76,7 +75,7 @@ def main():
             assert(len(result[j][0][id])==subset_size)
             data_indices += result[j][0][id]
             sum_scores_experiment += result[j][1][id]
-        # np.savetxt(f"data_COIL20/indices_{id}.txt", data_indices, fmt='%d')
+        # end for 
         data_experiments.append(data_indices)
         scores_experiments_sum_class.append(sum_scores_experiment)
     # stop putting together indices of experiments 
@@ -133,7 +132,6 @@ def main():
         scores_mixed_bars.append(mix_score_sum)
     #end for
         
-    # Sort again following sum scores 
     sum_strengths_list = []
     for idx, result in enumerate(result_match_strength_exp):
         sum_strengths_list.append(np.sum(result[0])-scores_mixed_bars[idx])
@@ -149,7 +147,6 @@ def main():
         np.savetxt(f"data_COIL20/indices_{id}.txt", data_indices, fmt='%d')
     id_exp = 0
     with open("plots/COIL_CLASS/experiments_matchings.txt", mode="w") as file:
-        print("Experiments, sorting according to sum scores", file=file)
         for id_exp, result in enumerate(result_match_strength_exp):
             strengths_exp = result[0]
             if len(strengths_exp)>0:
@@ -197,8 +194,9 @@ def matching_class_total(data, y, cidx):
     for S_bar, match_id in zip(ibfm_out["S_barcode_1"], ibfm_out["block_function_1"]):
         X_bar = ibfm_out["X_barcode_1"][match_id]
         if match_id != -1 and match_id not in already_matched:
-            block_scores.append(X_bar[1] - S_bar[0])
-            already_matched.append(match_id)
+            # block_scores.append((X_bar[1]-X_bar[0])*(X_bar[1]-S_bar[0])/(S_bar[1]-X_bar[0]))
+            block_scores.append((X_bar[1] - S_bar[0]))
+            # already_matched.append(match_id)
         else:
             block_scores.append(0)
 
@@ -209,6 +207,7 @@ def matching_experiment_total(data, data_experiments, block_images_op, id_exp):
     ibfm_out=  ibfm.get_IBloFunMatch_subset(
         None, data, data_experiments[id_exp], output_dir, num_it=4, points=True, max_rad=-1
         )
+    
 
     # DIM 1
     fig, ax = plt.subplots(ncols=2, nrows=1, figsize=(8,4))
@@ -232,18 +231,26 @@ def matching_experiment_total(data, data_experiments, block_images_op, id_exp):
     for idx_S, S_bar in enumerate(ibfm_out["S_barcode_1"]):
         match_id = ibfm_out["block_function_1"][idx_S]
         if match_id != -1 and match_id not in already_matched:
-            strength = ibfm_out["matching_strengths_1"][idx_S]
             X_bar = ibfm_out["X_barcode_1"][match_id]
-            # block_scores.append(ibfm_out["X_barcode_1"][match_id][1] - S_bar[0])
-            # block_scores.append(((X_bar[1]-S_bar[0])*(S_bar[1]-X_bar[0]))/(S_bar[0]*X_bar[0]))
-            block_scores.append(X_bar[1]-S_bar[0])
+            # block_scores.append((X_bar[1]-X_bar[0])*(X_bar[1]-S_bar[0])/(S_bar[1]-X_bar[0]))
+            block_scores.append((X_bar[1] - S_bar[0]))
             already_matched.append(match_id)
         else:
             # block_scores.append(S_bar[0]-S_bar[1])
             block_scores.append(0)
         
-
-    # print(f"exp {id_exp}, block_scores: {block_scores}")
+    # # See also the matching from the complement 
+    # data_complement = [i for i in range(data.shape[0]) if i not in data_experiments[id_exp]]
+    # ibfm_out_complement =  ibfm.get_IBloFunMatch_subset(
+    #     None, data, data_complement, output_dir, num_it=4, points=True, max_rad=-1
+    #     )
+    # # DIM 1
+    # fig, ax = plt.subplots(ncols=2, nrows=1, figsize=(8,4))
+    # if(ibfm_out["S_barcode_1"].shape[0]>0):
+    #     ibfm.plot_matching(ibfm_out_complement, ax, fig, dim=1, frame_on=True, strengths=False, codomain_int=block_images_op, block_function=True)
+    # ax[0].set_title(f"Experiment {id_exp} complement", fontsize=20)
+    # plt.savefig(f"plots/COIL_CLASS/matching_1_complement_{id_exp}.png")
+    # plt.close(fig)
     return block_scores, ibfm_out
 
 def matching_experiment_class(data, y, num_exp, subset_size, cidx):
@@ -262,40 +269,63 @@ def matching_experiment_class(data, y, num_exp, subset_size, cidx):
     for i in range(num_exp):
         exp_indices.append(np.sort(rng.choice(range(n_samples), subset_size, replace=False)).tolist()) 
     exp_match = []
-    for id_exp in range(len(exp_indices)):
+    # exp_match_complement = []
+    for id_exp, indices_subset in enumerate(exp_indices):
         indices_subset = exp_indices[id_exp]
         print(indices_subset)
         print(f"indices_subset length:{len(indices_subset)}, subset_size:{subset_size}")
         assert(len(indices_subset)==subset_size)
         exp_match.append(ibfm.get_IBloFunMatch_subset(None, class_data, indices_subset, output_dir, num_it=4, points=True, max_rad=-1))
-    # finished with matchings
+        # also do matchings with complements
+        # indices_complement = [i for i in range(class_data.shape[0]) if i not in indices_subset]
+        # exp_match_complement.append(ibfm.get_IBloFunMatch_subset(
+        #     None, class_data, indices_complement, output_dir, num_it=4, points=True, max_rad=-1
+        # ))
+    # end for 
     # Compute max and sum scores
     max_scores, sum_scores, sq_scores, st_scores = [], [], [], []
     scores_exp = []
+    sums_zero_match = np.zeros(len(exp_match))
     for id_exp, ibfm_out in enumerate(exp_match):
+        # Compute complement lengths
+        # ibfm_compl = exp_match_complement[id_exp]
+        # complement_lengths = np.zeros(ibfm_compl["X_barcode_1"].shape[0])
+        # already_matched = []
+        # for idx_S, S_bar in enumerate(ibfm_compl["S_barcode_1"]):
+        #     match_id = ibfm_compl["block_function_1"][idx_S]
+        #     if match_id != -1 and match_id not in already_matched:
+        #         X_bar = ibfm_compl["X_barcode_1"][match_id]
+        #         complement_lengths[match_id] = X_bar[1] - S_bar[0]
+        #         already_matched.append(match_id)
+        #     # end adding length
+        # # end for over matched intervals in complement
+        # Now, compute matching strength of current sample, taking into account 
+        # the complement_lengths
         block_scores = [] 
-        st_scores_exp = [0]
         already_matched = []
         for idx_S, S_bar in enumerate(ibfm_out["S_barcode_1"]):
             match_id = ibfm_out["block_function_1"][idx_S]
             if match_id != -1 and match_id not in already_matched:
                 X_bar = ibfm_out["X_barcode_1"][match_id]
-                strength = ibfm_out["matching_strengths_1"][idx_S]
-                # block_scores.append(ibfm_out["X_barcode_1"][match_id][1] - S_bar[0])
-                # block_scores.append(strength*(S_bar[1]-X_bar[0]))
-                # block_scores.append((S_bar[1]-X_bar[0])*strength/S_bar[0])
-                block_scores.append(X_bar[1]-S_bar[0])
-                # st_scores_exp.append(block_scores[-1]/ibfm_out["X_barcode_1"][match_id][0])
-                # st_scores_exp.append((ibfm_out["X_barcode_1"][match_id][1]-S_bar[0])/S_bar[0])
-                st_scores_exp.append((ibfm_out["X_barcode_1"][match_id][1]-S_bar[0])*(S_bar[1]-ibfm_out["X_barcode_1"][match_id][0])/(S_bar[0]**2))
+                # strength = ibfm_out["matching_strengths_1"][idx_S]
+                # bar_affinity = (X_bar[1]-S_bar[0]) / (S_bar[1]-X_bar[0])
+                # block_scores.append((X_bar[1]-S_bar[0]) * (S_bar[1]-S_bar[0]) / (X_bar[1]-X_bar[0]))
+                # overlap_length = min(X_bar[1]-S_bar[0], complement_lengths[match_id])
+                # block_scores.append((X_bar[1]-X_bar[0])*(X_bar[1]-S_bar[0])/(S_bar[1]-X_bar[0]))
+                block_scores.append((X_bar[1] - S_bar[0]))
                 already_matched.append(match_id)
             else:
-                # block_scores.append((S_bar[0]-S_bar[1])/S_bar[0]) # subtract weighted unmatched bars
-                # block_scores.append((S_bar[0]-S_bar[1])*(S_bar[0]-S_bar[1])) # subtract weighted unmatched bars
+                # block_scores.append(-(S_bar[1]-S_bar[0])/S_bar[0])
                 block_scores.append(0)
-                st_scores_exp.append(0)
+        # end for 
         scores_exp.append(np.array(block_scores))
-        st_scores.append(np.sum(np.array(st_scores_exp)))
+        
+        # Get sum of intervals on zero diagram 
+        for S_idx, S_bar in enumerate(ibfm_out["S_barcode_0"]):
+            match_id = ibfm_out["block_function_0"][S_idx]
+            if match_id != -1:
+                X_bar = ibfm_out["X_barcode_0"][match_id]
+                sums_zero_match[id_exp] += S_bar[1] - X_bar[0]
     #finished computing block scores 
     for id_exp, block_scores in enumerate(scores_exp):
         if(len(block_scores)>0):
@@ -307,27 +337,27 @@ def matching_experiment_class(data, y, num_exp, subset_size, cidx):
             sum_scores.append(0)
             sq_scores.append(0)
     # end adding scores
-    # Write max and sum scores (before sort)
-    np.savetxt(f"plots/COIL_CLASS/class_{cidx}/max_scores_before.txt", max_scores, fmt='%4.4f')
-    np.savetxt(f"plots/COIL_CLASS/class_{cidx}/sum_scores_before.txt", sum_scores, fmt='%4.4f')
     # Sort according to scores 
     # order_indices = [0] + (np.argsort(-np.array(max_scores[1:]))+1).tolist()
     order_indices = np.argsort(-np.array(sum_scores)).tolist()
+    print(f"class: {cidx}, order_indices:{order_indices}")
     # order_indices = list(range(len(st_scores)))
-    print(f"order_simplices:{order_indices}")
+    print(f"order_indices:{order_indices}")
     max_scores = np.array(max_scores)[order_indices]
     sum_scores = np.array(sum_scores)[order_indices]
     sq_scores = np.array(sq_scores)[order_indices]
+    sums_zero_match = np.array(sums_zero_match)[order_indices]
     print(f"cidx:{cidx}")
     print(f"max_scores: {max_scores}")
     print(f"sum_scores: {sum_scores}")
     print(f"sq_scores: {sq_scores}")
     exp_match = [exp_match[i] for i in order_indices]
+    # exp_match_complement = [exp_match_complement[i] for i in order_indices]
     exp_indices = [exp_indices[i] for i in order_indices]
     # Write max and sum scores
-    np.savetxt(f"plots/COIL_CLASS/class_{cidx}/max_scores.txt", max_scores, fmt='%4.4f')
-    np.savetxt(f"plots/COIL_CLASS/class_{cidx}/sum_scores.txt", sum_scores, fmt='%4.4f')
-    np.savetxt(f"plots/COIL_CLASS/class_{cidx}/sq_scores.txt", sq_scores, fmt='%4.4f')
+    # np.savetxt(f"plots/COIL_CLASS/class_{cidx}/max_scores.txt", max_scores, fmt='%4.4f')
+    # np.savetxt(f"plots/COIL_CLASS/class_{cidx}/sum_scores.txt", sum_scores, fmt='%4.4f')
+    # np.savetxt(f"plots/COIL_CLASS/class_{cidx}/sq_scores.txt", sq_scores, fmt='%4.4f')
     # Plot matchings in max order
     for id_exp, ibfm_out in enumerate(exp_match):
         # PLOT DIM 1 
@@ -347,12 +377,29 @@ def matching_experiment_class(data, y, num_exp, subset_size, cidx):
         # Plot 0 diag 
         plot_zero_diag(ibfm_out, f"plots/COIL_CLASS/class_{cidx}/diag_0_{id_exp}.png")
     # end plotting experiments per class
+    # np.savetxt(f"plots/COIL_CLASS/class_{cidx}/sum_0_block.txt", sums_zero_match, fmt='%4.4f')
+    # Write scores for this class and all experiments in a file 
+    scores_matrix = np.vstack((np.argsort(sums_zero_match), np.argsort(-max_scores), np.argsort(-sum_scores), np.argsort(-sq_scores)))
+    scores_matrix = np.vstack((list(range(scores_matrix.shape[1])), scores_matrix))
+    scores_matrix = scores_matrix.transpose()
+    np.savetxt(f"plots/COIL_CLASS/class_{cidx}/scores_orders.txt", scores_matrix, fmt="%d")
+    # Compute indices of experiment within all data 
     exp_indices_global = [] 
     for indices_subset in exp_indices: 
         aux_indices = np.array(class_indices)[indices_subset].tolist()
         assert(np.all(np.array(y)[aux_indices]==cidx)) # little check
         exp_indices_global.append(aux_indices)
-    # getting exp_Indices
+
+    # # Plot complements of matchings 
+    # for id_exp, ibfm_out_complement in enumerate(exp_match_complement):
+    #     # PLOT DIM 1 
+    #     fig, ax = plt.subplots(ncols=2, nrows=1, figsize=(8,4))
+    #     if(ibfm_out_complement["S_barcode_1"].shape[0]>0):
+    #         ibfm.plot_matching(ibfm_out_complement, ax, fig, dim=1, frame_on=True, strengths=False, block_function=True)
+    #     ax[0].set_title(f"Experiment {id_exp} complement", fontsize=20)
+    #     plt.savefig(f"plots/COIL_CLASS/class_{cidx}/matching_1_{id_exp}_complement.png")
+    #     plt.close(fig)
+    # # getting exp_Indices
     return exp_indices_global, sum_scores
 # matching_experiment_class
 

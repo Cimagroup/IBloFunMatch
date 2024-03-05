@@ -115,7 +115,7 @@ def plot_matching(IBloFunMatch_o, ax, fig, max_rad=-1, colorbars=["orange", "aqu
     # Limits on x axis depend on value where filtration is "cut"
     MAX_PLOT_RAD = max(np.max(S_barcode), np.max(X_barcode))*1.1
     if max_rad>=0:
-        MAX_PLOT_RAD = max_rad
+        MAX_PLOT_RAD = max(max_rad, MAX_PLOT_RAD)
     ax[0].set_xlim([0, MAX_PLOT_RAD])
     ax[1].set_xlim([0, MAX_PLOT_RAD])
 
