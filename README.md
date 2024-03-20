@@ -16,7 +16,7 @@ Build IBloFunMatch
 ```sh
 	mkdir build
 	cd build 
-	cmake ..
+	cmake -DCMAKE_BUILD_TYPE=Debug ..
 	cmake --build .
 ```
 - Inside the build directory there is an executable "IBloFunMatch" which now can be run from the Notebooks and the terminal.
