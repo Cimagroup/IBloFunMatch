@@ -7,7 +7,8 @@
 
 # Build Files 
 x64
-env
+venv
+dist
 Debug
 enc_temp_folder
 build/*
@@ -15,6 +16,8 @@ build/*
 *.json
 __pycache__
 out
+*.egg-info
+.
 
 # Output files and images 
 *.png
@@ -22,7 +25,7 @@ out
 *.out
 
 # Notebook files 
-.ipynb_checkpoints
+*.ipynb_checkpoints
 
 
 # Do not copy MNIST data 

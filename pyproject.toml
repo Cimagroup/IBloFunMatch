@@ -1,0 +1,11 @@
+[project]
+name = "iblofunmatch"
+version = "0.0.1"
+dependencies = [
+    "numpy", "matplotlib",
+]
+[tool.setuptools.packages.find]
+# All the following settings are optional:
+where = ["."]  # ["."] by default
+include = ["iblofunmatch*"]  # ["*"] by default
+namespaces = false  # true by default

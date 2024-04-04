@@ -1,6 +1,4 @@
 # Functions for computing and plotting the induced block function and matchings 
-from operator import iand
-from re import S, X
 import sys 
 import os
 import numpy as np
