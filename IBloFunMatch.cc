@@ -70,7 +70,9 @@ void merge_distances(
 );
 
 int main(int argc, char* argv[]) {
-	std::cout << "WELCOME TO IBLOFUNMATCH!!!" << std::endl;
+	#ifdef IBLOFUNMATCH_MIN
+		std::cout << "WELCOME TO IBLOFUNMATCH!!!" << std::endl;
+	#endif
 	#ifdef DEBUG_STRENGTHS
 		std::cout << "Defined DEBUG_STRENGTHS-------------------------(!!!!)" << std::endl;
     #endif

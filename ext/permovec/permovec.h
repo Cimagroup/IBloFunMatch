@@ -87,8 +87,10 @@ void init_VR(int dim_max, size_t num_points, std::vector<Filtered_edge>& edges_l
     // Add higher dimensional (>=2) simplices
     stree.expansion(dim_max);
     // Print out some info about collapse and dimension
-    std::cout << "The subcomplex contains " << stree.num_simplices() << " simplices  after collapse. \n";
-    std::cout << "   and has dimension " << stree.dimension() << " \n";
+    #ifdef PERMOVEC_SIZES
+        std::cout << "The subcomplex contains " << stree.num_simplices() << " simplices  after collapse. \n";
+        std::cout << "   and has dimension " << stree.dimension() << " \n";
+    #endif
     // Sort the simplices in the order of the filtration
     stree.initialize_filtration();
     // Initialize simplex keys (needed for PHAT persistent homology computation)
@@ -110,7 +112,9 @@ void pairs_and_matrix_VR(
     Barcodes_dim& X_barcode, Reps_dim& X_reps,
     Matrix_dim& pm_matrix_dim
 ){
-  std::cout << "Welcome to PerMoVEC!" << std::endl;
+  #ifdef PERMOVEC_SIZES
+    std::cout << "Welcome to PerMoVEC!" << std::endl;
+  #endif
   //-----------------------------------------------------------------------------------------
   // Collapse subcomplex and compute VR
   //-----------------------------------------------------------------------------------------

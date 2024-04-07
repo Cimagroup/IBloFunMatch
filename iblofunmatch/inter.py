@@ -14,7 +14,7 @@ print(f"EXECUTABLE_PATH: {EXECUTABLE_PATH}")
 attributes = ["X_barcode", "S_barcode", "X_reps", "S_reps", "S_reps_im", "pm_matrix", "induced_matching", "matching_strengths", "block_function"]
 types_list = ["float", "float", "int", "int", "int", "int", "int", "float", "int"]
 
-def get_IBloFunMatch_subset(Dist_S, Dist_X, idS, output_dir, max_rad=-1, num_it=1, store_0_pm=False, points=False):
+def get_IBloFunMatch_subset(Dist_S, Dist_X, idS, output_dir, max_rad=-1, num_it=1, store_0_pm=False, points=False, max_dim=2):
     # Buffer files to write subsets and classes for communicating with C++ program 
     f_ind_sampl = output_dir + "/" + "indices_sample.out"
     f_dist_X = output_dir + "/" + "dist_X.out"
@@ -44,10 +44,12 @@ def get_IBloFunMatch_subset(Dist_S, Dist_X, idS, output_dir, max_rad=-1, num_it=
         extra_flags += " -c true "
     # only if we want to store the 0 dimensional pm matrix
 
-    os.system(EXECUTABLE_PATH + " " + f_dist_S + " " + f_dist_X + " " + f_ind_sampl + " -d 2 " + " -o " + output_dir + extra_flags )
+    os.system(EXECUTABLE_PATH + f" {f_dist_S} {f_dist_X} {f_ind_sampl} -d {max_dim} -o {output_dir}" + extra_flags )
     # Save barcodes and representatives reading them from output files
     data_read = []
     for dim in range(2):
+        if max_dim < dim:
+            break
         for attribute, typename in zip(attributes, types_list):
             if (attribute=="pm_matrix") and (dim==0) and (not store_0_pm):
                 continue
