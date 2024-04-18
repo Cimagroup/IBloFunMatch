@@ -19,15 +19,15 @@ Build IBloFunMatch
 	cmake -DCMAKE_BUILD_TYPE=Debug ..
 	cmake --build .
 ```
-- Inside the build directory there is an executable "IBloFunMatch" which now can be run from the Notebooks and the terminal.
-- For example (inside the build directory), executing 
+
+Python Installation
+-------------------
+To run the notebooks, it is required to install iblofunmatch. For this, we recommend creating a virtual environment. Once created and activated, inside the main IBloFunMatch folder, run the following command
 ```sh
-	./IBloFunMatch -h 
+	python3 -m pip install .
 ```
-  will print the help menu of the program.
-
-- You can now run the jupyter notebooks inside the "Notebooks" folder. 
-
-- (! Not working ATM) You can also execute the python script "IBloFunMatch.py" which reads a data file and plots the matching as follows:
-	python IBloFunMatch.py {path to executable file} {sample percentage (from 0 to 1)} {path to data points} 
-	(e.g. python IBloFunMatch.py build/IBloFunMatch.exe 0.4 samples/dino_data.txt)
+After the installation, one should be able to load the module `iblofunmatch', to check it, one can run the following command:
+```sh
+	python3 -c "import iblofunmatch"
+```
+If there are no error messages, the module is correctly installed.
