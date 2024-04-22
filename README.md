@@ -24,10 +24,11 @@ Python Installation
 -------------------
 To run the notebooks, it is required to install iblofunmatch. For this, we recommend creating a virtual environment. Once created and activated, inside the main IBloFunMatch folder, run the following command
 ```sh
-	python3 -m pip install .
+	python3 -m pip install --editable .
 ```
+We need to add the "editable" option since we will use the code built in this folder.
 After the installation, one should be able to load the module `iblofunmatch', to check it, one can run the following command:
 ```sh
-	python3 -c "import iblofunmatch"
+	python3 -c "import iblofunmatch.inter as ibfm"
 ```
-If there are no error messages, the module is correctly installed.
+The path to the executable file should appear printed. If there are no error messages, the module is correctly installed.
