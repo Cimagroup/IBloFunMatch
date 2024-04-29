@@ -2,6 +2,8 @@ import os
 import numpy as np
 import matplotlib as mpl
 from pathlib import Path
+import scipy.spatial.distance as dist
+import itertools
 
 # Read executable path from cmake-generated file 
 parent_dir = Path(os.path.realpath(__file__)).parent.parent
@@ -282,6 +284,95 @@ def plot_barcode(barcode, color, ax):
     ax.set_xlim([0, MAX_PLOT_RAD])
 # end  plot barcode
 
+### Geometric Matching 
+def compute_components(edgelist, num_points):
+    components = np.array(range(num_points))
+    for edge in edgelist:
+        indices = np.nonzero(components == components[np.max(edge)])[0]
+        components[indices]=np.ones(len(indices))*components[np.min(edge)]
+    return components
+
+def plot_geometric_matching(a, b, idx_S, X, ibfm_out, ax, _tol=1e-5, labelsize=10):
+    S = X[idx_S]
+    # Obtain indices of bars that are approximately equal to a and b, these go from (a_idx - a_shift) to a_idx. (same for b_idx)
+    a_idx = np.max(np.nonzero(ibfm_out["S_barcode_0"][:,1] < a + _tol))
+    a_shift = np.sum(ibfm_out["S_barcode_0"][:,1][:a_idx+1] > a - _tol)
+    b_idx = np.max(np.nonzero(ibfm_out["X_barcode_0"][:,1] < b + _tol))
+    b_shift = np.sum(ibfm_out["X_barcode_0"][:,1][:b_idx+1] > b - _tol)
+    pair_ab = [a_idx, b_idx]
+    shift_ab = [a_shift, b_shift]
+    num_points = X.shape[0]
+    for idx in range(3):
+        ax[idx].scatter(S[:,0], S[:,1], color=mpl.colormaps["RdBu"](0.3/1.3), s=60, marker="o", zorder=2)
+        ax[idx].scatter(X[:,0], X[:,1], color=mpl.colormaps["RdBu"](1/1.3), s=40, marker="x", zorder=1)
+        # Plot edges that came before a, b
+        bool_smaller = dist.pdist(S)<=a-_tol
+        edgelist = np.array([[i,j] for (i,j) in itertools.product(idx_S, idx_S) if i < j])[bool_smaller].tolist()
+        bool_smaller = dist.pdist(X)<=b-_tol
+        edgelist += np.array([[i,j] for (i,j) in itertools.product(range(num_points), range(num_points)) if i < j])[bool_smaller].tolist()
+        for edge in edgelist:
+            ax[idx].plot(X[edge][:,0], X[edge][:,1], c="black", zorder=0.5)
+        # Remove axis 
+        ax[idx].set_xticks([])
+        ax[idx].set_yticks([])
+        # Draw node labels
+        for i in range(X.shape[0]):
+            ax[idx].text(X[i,0]+0.05, X[i,1], f"{i}", fontsize=labelsize)
+        # end for labels 
+    # end for plots
+    # Plot edges from a 
+    bool_smaller = dist.pdist(S)<a+_tol
+    edgelist = np.array([[i,j] for (i,j) in itertools.product(idx_S, idx_S) if i < j])[bool_smaller].tolist()
+    for edge in edgelist:
+        ax[0].plot(X[edge][:,0], X[edge][:,1], c="black", zorder=0.5)
+    # # Plot edges from b
+    bool_smaller = dist.pdist(X) <b +_tol
+    edgelist = np.array([[i,j] for (i,j) in itertools.product(range(num_points), range(num_points)) if i < j])[bool_smaller].tolist()
+    for edge in edgelist:
+        ax[2].plot(X[edge][:,0], X[edge][:,1], c="black", zorder=0.5)
+    # Now, plot cycle graph of components 
+    ax[3].set_xticks([])
+    ax[3].set_yticks(list(range(num_points)))
+    components_mat = []
+    for idx in range(3):
+        edgelist = ibfm_out['S_reps_0'][:pair_ab[0]-shift_ab[0]*int(idx!=0)+1]
+        edgelist += ibfm_out['X_reps_0'][:pair_ab[1]-shift_ab[1]*int(idx!=2)+1]
+        components = compute_components(edgelist, num_points)
+        components_mat.append(components)
+    
+    components_mat = np.array(components_mat)
+    for idx in range(3):
+        u_components = np.unique(components_mat[idx]).tolist()
+        points = np.array([np.ones(len(u_components))*idx, u_components]).transpose()
+        ax[3].scatter(points[:,0], points[:,1], c="black", zorder=2)
+        if idx==1:
+            for comp in u_components:
+                col_idx = components_mat[1].tolist().index(comp)
+                left_comp = components_mat[0, col_idx]
+                right_comp = components_mat[2, col_idx]
+                ax[3].plot([0,1,2],[left_comp, comp, right_comp], c="black")
+    
+    
+    # Adjust frames a bit more far appart
+    for idx in range(4):
+        xlim = ax[idx].get_xlim()
+        xlength = xlim[1]-xlim[0]
+        xlim = (xlim[0]-xlength*0.1, xlim[1]+xlength*0.1)
+        ylim = ax[idx].get_ylim()
+        ylength = ylim[1]-ylim[0]
+        ylim = (ylim[0]-ylength*0.1, ylim[1]+ylength*0.1)
+        ax[idx].set_xlim(xlim)
+        ax[idx].set_ylim(ylim)
+        if idx < 3:
+            ax[idx].set_aspect("equal")
+    
+    # Write titles 
+    ax[0].set_title(f"{a:.2f}+, {b:.2f}-")
+    ax[1].set_title(f"{a:.2f}-, {b:.2f}-")
+    ax[2].set_title(f"{a:.2f}-, {b:.2f}+")
+    ax[3].set_title(f"G({a:.2f},{b:.2f})")
+
+### Random Circle Creation 
 def sampled_circle(r, R, n, RandGen):
     assert r<=R
     radii = RandGen.uniform(r,R,n)
