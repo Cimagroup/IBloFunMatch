@@ -231,6 +231,9 @@ int main(int argc, char* argv[]) {
 			Gudhi::Euclidean_distance());
 	}
 	
+	#ifdef DEBUG
+		std::cout << "Finished with matrices, calling PerMoVec" << std::endl;
+	#endif
 	// ------------------------------------------------------------------------
 	// Initialize edge lists and call PerMoVec
 	// ------------------------------------------------------------------------

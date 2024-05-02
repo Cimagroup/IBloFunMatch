@@ -1,6 +1,7 @@
 import os
 import numpy as np
 import matplotlib as mpl
+import matplotlib.pyplot as plt
 from pathlib import Path
 import scipy.spatial.distance as dist
 import itertools
@@ -371,6 +372,23 @@ def plot_geometric_matching(a, b, idx_S, X, ibfm_out, ax, _tol=1e-5, labelsize=1
     ax[1].set_title(f"{a:.2f}-, {b:.2f}-")
     ax[2].set_title(f"{a:.2f}-, {b:.2f}+")
     ax[3].set_title(f"G({a:.2f},{b:.2f})")
+
+def plot_density_matrix(dim, exp_ibfm, nbins=5):
+    bars_X=exp_ibfm['X_barcode_'+str(dim)]
+    bars_S=exp_ibfm['S_barcode_'+str(dim)]
+    block = exp_ibfm['block_function_'+str(dim)]
+    matched_bars = [(bars_X[i],b) for (i,b) in zip(block,bars_S) if i!=-1]
+    unmatched_bars = [b for (i,b) in zip(block,bars_S) if i==-1]
+    diff_length = np.array([[sum(abs(x-y)),y[1]-y[0]] for (x,y) in matched_bars])
+    diff_unmatched = np.array([[b[1]-b[0],np.inf] for b in unmatched_bars])
+    if len(diff_unmatched)!=0:
+        diff_length=np.concatenate((diff_length,diff_unmatched))
+    plt.hist2d(diff_length[:,0], diff_length[:,1], bins=(nbins, nbins), cmap=plt.cm.jet)
+    plt.xlabel('Differences of the bars')
+    plt.ylabel('Length of the bars X')
+    plt.colorbar()
+    return
+
 
 ### Random Circle Creation 
 def sampled_circle(r, R, n, RandGen):
