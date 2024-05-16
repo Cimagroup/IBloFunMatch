@@ -1,0 +1,14 @@
+GPATH
+GRTAGS
+GTAGS
+CMakeCache.txt
+self_test
+info
+convert
+cmake_install.cmake
+benchmark
+Makefile
+CMakeFiles
+*.pyd
+build
+*.exe
