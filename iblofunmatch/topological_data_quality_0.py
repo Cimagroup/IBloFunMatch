@@ -120,3 +120,80 @@ def plot_density_matrix(filt_S, filt_X, matching, ax, nbins=5):
     ax.hist2d(differences[:,0], differences[:,1], bins=(nbins, nbins), cmap=plt.cm.jet)
     ax.set_xlabel('Differences of the bars')
     ax.set_ylabel('Length of the bars X')
+
+def plot_density_matrix_percentage(filt_S, filt_X, matching, ax, nbins=5):
+    ends_S = np.array(filt_S)
+    max_end = np.max(ends_S)
+    ends_diff = ends_S - np.array(filt_X)[matching]
+    Diag_diff = np.vstack((ends_S, ends_diff)).transpose()
+    hist = np.histogram2d(Diag_diff[:,1], Diag_diff[:,0], bins=nbins, range=[[0,max_end], [0,max_end]])[0]
+    sum_cols = np.sum(hist, axis=0)
+    sum_cols = np.maximum(sum_cols, 1)
+    hist = np.divide(hist, sum_cols)
+    hist=hist[-1::-1]
+    ax.imshow(hist, extent=(0, max_end, 0, max_end))
+    ax.set_xlabel('Differences of the bars (percent)')
+    ax.set_ylabel('Length of the bars X')
+
+def compute_mathing_diagram(filt_S, filt_X, matching, _tol=1e-5):
+    pairs = []
+    for i, a in enumerate(filt_S):
+        b = filt_X[matching[i]]
+        pairs.append((a, b))
+    # end for 
+    multiplicities = [] 
+    pairs_copy = list(pairs)
+    old_pair = pairs_copy.pop()
+    multiplicities.append(1)
+    # First compute matched pairs and their multiplicities
+    while len(pairs_copy)>0:
+        pair = pairs_copy.pop()
+        if np.all(np.abs(np.array(pair)-np.array(old_pair)) < _tol):
+            multiplicities[-1]+=1
+        else:
+            multiplicities.append(1)
+            old_pair = pair
+        # end checking if pair similar
+    # end while
+    # Next compute right infinity points and their multiplicities 
+    unmatched_idx = [j for j in range(len(filt_X)) if j not in matching]
+    if len(unmatched_idx)>0:
+        b = filt_X[unmatched_idx.pop()]
+        pairs.append((np.infty, b))
+        multiplicities.append(1)
+        while len(unmatched_idx)>0:
+            prev_b = b
+            b = filt_X[unmatched_idx.pop()]
+            if (np.abs(b-prev_b)<_tol):
+                multiplicities[-1]+=1
+            else:
+                pairs.append((np.inf, b))
+                multiplicities.append(1)
+            # end checking same endpoint
+        # iterate over unmatched intervals
+    # only if some intervals are unmatched
+    return np.array(pairs), multiplicities
+
+
+def plot_matching_diagram(pairs, ax, colorpt="black", marker="o", size=15, hmax=None):
+    fin_pairs = pairs[pairs[:,0]<np.inf]
+    if hmax is None:
+        max_x = max(np.max(fin_pairs), np.max(pairs[:,1]))
+        lim_x = max_x*1.3
+        infty_x = max_x*1.1
+    else:
+        max_x, lim_x, infty_x = hmax, hmax*1.3, hmax*1.1
+    # end if-else loop
+    ax.plot([0, lim_x], [0, lim_x], c="gray", linewidth=1, zorder=1)
+    ax.plot([infty_x, infty_x], [0, lim_x], c="blue", linewidth=1, zorder=1)
+    ax.scatter(fin_pairs[:,0], fin_pairs[:,1], color=colorpt, s=size, marker=marker, zorder=2)
+    inf_points = pairs[pairs[:,0]==np.inf]
+    ax.scatter(np.ones(len(inf_points))*infty_x, inf_points[:,1], color=colorpt, s=size, marker=marker, zorder=2)
+    ax.text(infty_x*1.02, infty_x*1.1, "∞", fontsize=15, color="blue")
+    ax.scatter([infty_x], [infty_x], color=colorpt, s=size, marker=marker, zorder=2)
+    # Adjust spines 
+    ax.spines[["top", "right"]].set_visible(False)
+    ax.spines[["bottom","left"]].set_position("zero")
+    # adjust margins 
+    ax.set_xlim([0,lim_x])
+    ax.set_ylim([0,lim_x])
