@@ -374,7 +374,116 @@ def plot_geometric_matching(a, b, idx_S, X, ibfm_out, ax, _tol=1e-5, labelsize=1
 
 ### Random Circle Creation 
 def sampled_circle(r, R, n, RandGen):
-    assert r<=R
+    assert (r<=R) and (0 <= r)
     radii = RandGen.uniform(r,R,n)
     angles = RandGen.uniform(0,2*np.pi,n)
     return np.vstack((np.cos(angles)*radii, np.sin(angles)*radii)).transpose()
+
+def circle(r, n):
+    assert r > 0
+    angles = np.linspace(0,2*np.pi,n)[:-1]
+    return np.vstack((np.cos(angles)*r, np.sin(angles)*r)).transpose()
+
+
+
+# Helper functions for plotting matchings, Vietoris-Rips complexes and their cycle representatives
+# Some of the code for these comes from the TDQUAL repository: https://github.com/Cimagroup/tdqual/tree/main/tdqual
+
+import gudhi
+
+def plot_cycle(Z, cycle_edges, ax, color="red", linewidth="5"):
+    cycle_edges = list(cycle_edges)
+    while (len(cycle_edges)>0):
+        edge = Z[[cycle_edges.pop(), cycle_edges.pop()]]
+        ax.plot(edge[:,0], edge[:,1], c=color, linewidth=linewidth, zorder=1)
+    # end while
+# end def
+
+def plot_Vietoris_Rips(Z, filt_val, ax, labels=False, fontsize=15, color="black"):
+    # Plot point cloud
+    ax.scatter(Z[:,0], Z[:,1], color=color, s=20, marker="o", zorder=1)
+    # Plot simplicial complex 
+    rips_complex = gudhi.RipsComplex(points=Z, max_edge_length=filt_val)
+    simplex_tree = rips_complex.create_simplex_tree(max_dimension=1)
+    simplex_tree.collapse_edges()
+    simplex_tree.expansion(2)
+    edgelist = []
+    triangles = []
+    for filtered_value in simplex_tree.get_filtration():
+        simplex = filtered_value[0]
+        if len(simplex)==2:
+            edgelist.append(simplex)
+            ax.plot(Z[simplex][:,0], Z[simplex][:,1], linewidth=2, c=color, zorder=0.5)
+        if len(simplex)==3:
+            triangles.append(mpl.patches.Polygon(Z[simplex]))
+        # end triangles
+    # end for 
+    triangles_collection = mpl.collections.PatchCollection(triangles, color=color, alpha=0.1, zorder=-1)
+    ax.add_collection(triangles_collection)
+    ax.set_aspect("equal")
+    # Adjust margins
+    xscale = ax.get_xlim()[1]-ax.get_xlim()[0]
+    yscale = ax.get_ylim()[1]-ax.get_ylim()[0]
+    xlim = ax.get_xlim()
+    xlim = (xlim[0]-xscale*0.1, xlim[1]+xscale*0.1)
+    ax.set_xlim(xlim)
+    ylim = ax.get_ylim()
+    ylim = (ylim[0]-yscale*0.1, ylim[1]+yscale*0.1)
+    ax.set_ylim(ylim)
+    # Plot labels
+    if labels:
+        components = compute_components(edgelist, Z.shape[0])
+        # Point Labels 
+        for i in range(Z.shape[0]):
+            ax.text(Z[i,0]-0.035*xscale, Z[i,1]-0.035*yscale, f"{components[i]}", fontsize=fontsize, color="white", fontweight="bold")
+
+    # Finish with aspect details 
+    # ax.set_xticks([])
+    # ax.set_yticks([])
+    ax.grid(True, color="gray", alpha=0.2)
+
+def plot_Vietoris_Rips_subset(Z, X_indices, filt_val, ax, fontsize=15):
+    X = Z[X_indices]
+    # Plot point cloud
+    ax.scatter(X[:,0], X[:,1], color=mpl.colormaps["RdBu"](0.3/1.3), s=60, marker="o", zorder=2, label="X")
+    ax.scatter(Z[:,0], Z[:,1], color=mpl.colormaps["RdBu"](1/1.3), s=40, marker="o", zorder=1, label="$Z\setminus X$")
+    # Plot simplicial complex 
+    rips_complex = gudhi.RipsComplex(points=Z, max_edge_length=filt_val)
+    simplex_tree = rips_complex.create_simplex_tree(max_dimension=1)
+    simplex_tree.expansion(2)
+    edgelist = []
+    triangles_Z, triangles_X = [], []
+    for filtered_value in simplex_tree.get_filtration():
+        simplex = filtered_value[0]
+        if len(simplex)==2:
+            edgelist.append(simplex)
+            if len(np.intersect1d(simplex, X_indices))==2:
+                ax.plot(Z[simplex][:,0], Z[simplex][:,1], linewidth=2, c=mpl.colormaps["RdBu"](0.3/1.3), alpha=0.2, zorder=0.5)
+            else:
+                ax.plot(Z[simplex][:,0], Z[simplex][:,1], linewidth=2, c=mpl.colormaps["RdBu"](1/1.3), alpha=0.2, zorder=0.5)
+        if len(simplex)==3:
+            if len(np.intersect1d(simplex, X_indices))==3: 
+                triangles_X.append(mpl.patches.Polygon(Z[simplex]))
+            else:
+                triangles_Z.append(mpl.patches.Polygon(Z[simplex]))
+        # end triangles
+    # end for 
+    triangles_X_collection = mpl.collections.PatchCollection(triangles_X, color=mpl.colormaps["RdBu"](0.3/1.3), alpha=0.1, zorder=-1)
+    triangles_Z_collection = mpl.collections.PatchCollection(triangles_Z, color=mpl.colormaps["RdBu"](1/1.3), alpha=0.1, zorder=-1.2)
+    ax.add_collection(triangles_X_collection)
+    ax.add_collection(triangles_Z_collection)
+    ax.set_aspect("equal")
+    # Adjust margins
+    xscale = ax.get_xlim()[1]-ax.get_xlim()[0]
+    yscale = ax.get_ylim()[1]-ax.get_ylim()[0]
+    xlim = ax.get_xlim()
+    xlim = (xlim[0]-xscale*0.1, xlim[1]+xscale*0.1)
+    ax.set_xlim(xlim)
+    ylim = ax.get_ylim()
+    ylim = (ylim[0]-yscale*0.1, ylim[1]+yscale*0.1)
+    ax.set_ylim(ylim)
+
+    # Finish with aspect details 
+    # ax.set_xticks([])
+    # ax.set_yticks([])
+    ax.grid(True, color="gray", alpha=0.2)
