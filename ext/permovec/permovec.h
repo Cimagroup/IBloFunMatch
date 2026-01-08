@@ -87,7 +87,7 @@ void init_VR(int dim_max, size_t num_points, std::vector<Filtered_edge>& edges_l
     // Add higher dimensional (>=2) simplices
     stree.expansion(dim_max);
     // Print out some info about collapse and dimension
-    #ifdef PERMOVEC_SIZES
+    #ifdef DEBUG
         std::cout << "The subcomplex contains " << stree.num_simplices() << " simplices  after collapse. \n";
         std::cout << "   and has dimension " << stree.dimension() << " \n";
     #endif
@@ -118,13 +118,18 @@ void pairs_and_matrix_VR(
   //-----------------------------------------------------------------------------------------
   // Collapse subcomplex and compute VR
   //-----------------------------------------------------------------------------------------
-  for (int iter = 0; iter < edge_collapse_iter_nb; iter++) {
-    auto remaining_edges_S = Gudhi::collapse::flag_complex_collapse_edges(edges_list_S);
-    edges_list_S = std::move(remaining_edges_S);
-    remaining_edges_S.clear();
+  if (dim_max>1) {
+    for (int iter = 0; iter < edge_collapse_iter_nb; iter++) {
+      auto remaining_edges_S = Gudhi::collapse::flag_complex_collapse_edges(edges_list_S);
+      edges_list_S = std::move(remaining_edges_S);
+      remaining_edges_S.clear();
+    }
   }
   Simplex_tree stree_S;
   init_VR(dim_max, size_S, edges_list_S, stree_S);
+  #ifdef DEBUG 
+    std::cout << "Initialized permovec VR on S" << std::endl;
+  #endif
   //-----------------------------------------------------------------------------------------
   // PH of subcomplex and cycle representatives using PHAT
   //-----------------------------------------------------------------------------------------
@@ -144,6 +149,9 @@ void pairs_and_matrix_VR(
   for (Interval bar : barcode_1){
       births_1.push_back(bar.first);
   }
+  #ifdef DEBUG 
+    std::cout << "Finished computing pairs and cycles from S" << std::endl;
+  #endif
   //-----------------------------------------------------------------------------------------
   // Store list of edges from 1 dimensional cycles to send to "Flag_complex_edge_collapser"
   //-----------------------------------------------------------------------------------------
@@ -167,16 +175,22 @@ void pairs_and_matrix_VR(
   // Proceed to collapse large complex, collapsing embedded cycle representatives from subcomplex
   //-----------------------------------------------------------------------------------------
   std::vector<Filtered_edge> remaining_edges_X;
-  for (int iter = 0; iter < edge_collapse_iter_nb; iter++) {
-    auto remaining_edges_X = Gudhi::collapse::flag_complex_collapse_edges(edges_list_X, cycles_image_1);
-    edges_list_X = std::move(remaining_edges_X);
-    remaining_edges_X.clear();
-  }
-  // Store cycle images collapsed
   std::vector<Cycle_rep_1> reps_1_im;
-  for(std::pair<Filtration_value, Cycle_rep_1>& cycle : cycles_image_1) {
-      reps_1_im.push_back(cycle.second);
+  if (dim_max > 1) {
+    for (int iter = 0; iter < edge_collapse_iter_nb; iter++) {
+      auto remaining_edges_X = Gudhi::collapse::flag_complex_collapse_edges(edges_list_X, cycles_image_1);
+      edges_list_X = std::move(remaining_edges_X);
+      remaining_edges_X.clear();
+    }
+    // Store cycle images collapsed
+    for(std::pair<Filtration_value, Cycle_rep_1>& cycle : cycles_image_1) {
+        reps_1_im.push_back(cycle.second);
+    }
   }
+  
+  #ifdef DEBUG 
+    std::cout << "Creating reps_0_dim list" << std::endl;
+  #endif
   // We get the image of the 0 representatives directly using indices_S
   std::vector<Phat_column> reps_0_dim;
   for (Phat_column& rep : std::get<0>(S_reps)) {
@@ -186,11 +200,17 @@ void pairs_and_matrix_VR(
       }
       reps_0_dim.push_back(im_rep);
   }
+  #ifdef DEBUG 
+    std::cout << "Going to create VR on X" << std::endl;
+  #endif
   // Store image representatives into a tuple
   S_reps_im = {reps_0_dim, reps_1_im};
   // Compute large VR and barcode
   Simplex_tree stree_X;
   init_VR(dim_max, size_X, edges_list_X, stree_X);
+  #ifdef DEBUG 
+    std::cout << "Initialized permovec VR on X" << std::endl;
+  #endif
   //-----------------------------------------------------------------------------------------
   // PH of large complex and cycle representatives using PHAT
   //-----------------------------------------------------------------------------------------
@@ -199,10 +219,16 @@ void pairs_and_matrix_VR(
   // Reduce differential matrix and obtain pairs from PHAT
   phat::persistence_pairs ph_pairs_all_X;
   // compute persistent homology by means of the standard reduction
+  #ifdef DEBUG 
+    std::cout << "Reducing PHAT matrix" << std::endl;
+  #endif
   phat::compute_persistence_pairs<phat::standard_reduction>(ph_pairs_all_X, diff_mat_X);
   // Clear trivial pairs out and store into ph_pairs
   std::unordered_map<int, Phat_column> X_cycle_cols_dim;
   barcodes_and_reps_dim(stree_X, diff_mat_X, dim_max, ph_pairs_all_X, X_cycle_cols_dim, X_barcode, X_reps);
+  #ifdef DEBUG 
+    std::cout << "Finished computing pairs and cycles from X" << std::endl;
+  #endif
   //-----------------------------------------------------------------------------------------
   // Compute Persistence Morphism Matrices (pm_matrix) on dimensions 0 and 1
   //-----------------------------------------------------------------------------------------
@@ -256,7 +282,7 @@ void pairs_and_matrix_VR(
   // Use preimages to deduce the persistence morphism matrices in dimensions 0 and 1
   col_count = diff_mat_X.get_num_cols();
   for (int dim = 0; dim < 2; dim++) {
-      #ifdef DEBUG
+      #ifdef DEBUG_PM_MATRIX
         std::cout << dim << " PM_matrix:" << std::endl;
       #endif
       std::vector<Phat_index> X_cycle_cols = X_cycle_cols_dim[dim];
@@ -282,7 +308,7 @@ void pairs_and_matrix_VR(
                   }
               }
           }
-          #ifdef DEBUG
+          #ifdef DEBUG_PM_MATRIX
             for (Phat_index entry : cycle_coord) {
                 std::cout << entry << ", ";
             }
@@ -292,7 +318,7 @@ void pairs_and_matrix_VR(
           int_S++;
           col_count++;
       }
-      #ifdef DEBUG
+      #ifdef DEBUG_PM_MATRIX
         std::cout << "PM_matrix end" << std::endl;
       #endif
       pm_matrix_dim[dim] = pm_matrix;

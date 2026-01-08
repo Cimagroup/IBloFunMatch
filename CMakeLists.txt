@@ -6,6 +6,7 @@ project(IBloFunMatch_p
 
 option(DEBUG_MERGES		"Print matrices usied when computing merge distances"	OFF)
 option(DEBUG_STRENGTHS	"Print information about strength computation"			OFF)
+option(DEBUG	"Print general Debug messages"			ON)
 
 add_executable(IBloFunMatch IBloFunMatch.cc)
 
@@ -23,6 +24,9 @@ endif(DEBUG_MERGES)
 if(DEBUG_STRENGTHS)
 	target_compile_definitions(IBloFunMatch PRIVATE "DEBUG_STRENGTHS")
 endif(DEBUG_STRENGTHS)
+if(DEBUG)
+	target_compile_definitions(IBloFunMatch PUBLIC "DEBUG")
+endif(DEBUG)
 # target_compile_definitions(IBloFunMatch PUBLIC "DEBUG_STRENGTHS")
 
 # Save executable path into file

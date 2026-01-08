@@ -1,6 +1,7 @@
 import os
 import numpy as np
 import matplotlib as mpl
+import matplotlib.pyplot as plt
 from pathlib import Path
 import scipy.spatial.distance as dist
 import itertools
@@ -211,6 +212,27 @@ def plot_from_block_function(S_barcode, X_barcode, block_function, fig, ax, max_
     # end for
 # end  def plot_matchi
 
+def plot_matching_0(ibfm_out, ax):
+    """ Given two zero dimensional barcodes as well as a block function between them, this function plots the associated diagram"""
+    S_barcode_0 = ibfm_out["S_barcode_0"]
+    X_barcode_0 = ibfm_out["X_barcode_0"]
+    block_function_0 = ibfm_out["block_function_0"]
+    # Plot matching barcode
+    for i, X_end in enumerate(X_barcode_0[:,1]):
+        if i in block_function_0:
+            S_end = S_barcode_0[:,1][block_function_0.index(i)]
+            ax.add_patch(mpl.patches.Rectangle([0, i-0.2], X_end, 0.4, color="navy", zorder=2))
+            ax.add_patch(mpl.patches.Rectangle([X_end*0.9, i-0.2], S_end-X_end, 0.4, color="orange", zorder=1.9))
+        else:
+            ax.add_patch(mpl.patches.Rectangle([0, i-0.2], X_end, 0.4, color="aquamarine", zorder=2))
+
+    MAX_PLOT_RAD = max(np.max(S_barcode_0), np.max(X_barcode_0))*1.1
+    ax.set_xlim([-0.1*MAX_PLOT_RAD, MAX_PLOT_RAD*1.1])
+    ax.set_ylim([-0.1*X_barcode_0.shape[0], X_barcode_0.shape[0]])
+    ax.set_frame_on(False)
+    ax.set_yticks([])
+#end plot_matching_0
+
 def plot_blofun_0_diag(ibfm_out, ax, draw_hist=False):
     """ Given two zero dimensional barcodes as well as a block function between them, this function plots the associated diagram"""
     S_barcode_0 = ibfm_out["S_barcode_0"]
@@ -288,8 +310,11 @@ def plot_barcode(barcode, color, ax):
 def compute_components(edgelist, num_points):
     components = np.array(range(num_points))
     for edge in edgelist:
-        indices = np.nonzero(components == components[np.max(edge)])[0]
-        components[indices]=np.ones(len(indices))*components[np.min(edge)]
+        max_idx = np.max(components[edge])
+        min_idx = np.min(components[edge])
+        indices = np.nonzero(components == components[max_idx])[0]
+        components[indices]=np.ones(len(indices))*components[min_idx]
+    
     return components
 
 def plot_geometric_matching(a, b, idx_S, X, ibfm_out, ax, _tol=1e-5, labelsize=10):
@@ -371,6 +396,56 @@ def plot_geometric_matching(a, b, idx_S, X, ibfm_out, ax, _tol=1e-5, labelsize=1
     ax[1].set_title(f"{a:.2f}-, {b:.2f}-")
     ax[2].set_title(f"{a:.2f}-, {b:.2f}+")
     ax[3].set_title(f"G({a:.2f},{b:.2f})")
+
+def plot_density_matrix(dim, exp_ibfm, nbins=5):
+    bars_X=exp_ibfm['X_barcode_'+str(dim)]
+    bars_S=exp_ibfm['S_barcode_'+str(dim)]
+    block = exp_ibfm['block_function_'+str(dim)]
+    matched_bars = [(bars_X[i],b) for (i,b) in zip(block,bars_S) if i!=-1]
+    unmatched_bars = [b for (i,b) in zip(block,bars_S) if i==-1]
+    diff_length = np.array([[sum(abs(x-y)),y[1]-y[0]] for (x,y) in matched_bars])
+    diff_unmatched = np.array([[b[1]-b[0],np.inf] for b in unmatched_bars])
+    if len(diff_unmatched)!=0:
+        diff_length=np.concatenate((diff_length,diff_unmatched))
+    plt.hist2d(diff_length[:,0], diff_length[:,1], bins=(nbins, nbins), cmap=plt.cm.jet)
+    plt.xlabel('Differences of the bars')
+    plt.ylabel('Length of the bars X')
+    plt.colorbar()
+    return
+
+def plot_bimodule_0_blofun(ibfm_output, ax, fig, fill=True, linecolor="gray"):
+    S_ends = ibfm_output["S_barcode_0"][:,1]
+    X_ends = ibfm_output["X_barcode_0"][:,1]
+    blofun = ibfm_output["block_function_0"]
+    unmatched = [i for i in range(len(X_ends)) if i not in blofun]
+    hlim = np.max(S_ends)*1.6
+    # Fill horizontal turquoise bands for unmatched intervals 
+    for idx in unmatched:
+        b = X_ends[idx]
+        if fill:
+            ax.add_patch(mpl.patches.Rectangle([0, 0], hlim,  b, facecolor="turquoise", edgecolor="none", alpha=0.2, zorder=0.5))
+        ax.plot([0,hlim], [b,b], linewidth=1, color=linecolor, zorder=1)
+    # end for 
+     # Fill matched intervals with corresponding orange rectangles
+    match_points = []
+    for idx, idx_match in enumerate(blofun):
+        a = S_ends[idx]
+        b = X_ends[idx_match]
+        match_points.append([a,b])
+        if fill:
+            ax.add_patch(mpl.patches.Rectangle([0, 0], a, b, facecolor="orange", edgecolor="none", alpha=0.4, zorder=0.6))
+        ax.plot([0,a,a], [b,b,0], linewidth=1, color=linecolor, zorder=1)
+    # for 
+    match_points = np.array(match_points)
+    ax.scatter(match_points[:,0], match_points[:,1], s=30, marker="o", color=linecolor)
+    # draw diagonal line for reference 
+    ax.plot([0,hlim], [0, hlim], linestyle="dashed", linewidth=1, color="black", zorder=0.3)
+    # Set limits 
+    ax.set_xlim([0, hlim*0.9])
+    ax.set_ylim([0, np.max(X_ends)*1.3])
+    ax.set_aspect("equal")
+    fig.tight_layout()
+
 
 ### Random Circle Creation 
 def sampled_circle(r, R, n, RandGen):
