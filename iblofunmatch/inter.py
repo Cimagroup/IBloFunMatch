@@ -8,7 +8,7 @@ import itertools
 
 # Read executable path from cmake-generated file 
 parent_dir = Path(os.path.realpath(__file__)).parent.parent
-exe_path = os.path.join(parent_dir, "exe_path_Debug.txt")
+exe_path = os.path.join(parent_dir, "exe_path_.txt")
 with open(exe_path) as f:
     EXECUTABLE_PATH = f.readline()
 
@@ -38,7 +38,9 @@ def get_IBloFunMatch_subset(Dist_S, Dist_X, idS, output_dir, max_rad=-1, num_it=
     if max_rad!=-1:
         extra_flags += " -r " + f"{max_rad:f}" + " "
     # added maximum radius flag
-    if(num_it>1):
+    if(num_it<0):
+        raise ValueError("Number of iterations parameter (num_it) needs to be >= 0")
+    else:
         extra_flags += " -i " + f"{num_it:d}" + " "
     # added number of collapses iteration flag
     if(store_0_pm):

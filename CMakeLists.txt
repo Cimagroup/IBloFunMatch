@@ -6,7 +6,7 @@ project(IBloFunMatch_p
 
 option(DEBUG_MERGES		"Print matrices usied when computing merge distances"	OFF)
 option(DEBUG_STRENGTHS	"Print information about strength computation"			OFF)
-option(DEBUG	"Print general Debug messages"			ON)
+option(DEBUG	"Print general Debug messages"			OFF)
 
 add_executable(IBloFunMatch IBloFunMatch.cc)
 
