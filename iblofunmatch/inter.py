@@ -105,8 +105,7 @@ def plot_matching(IBloFunMatch_o, ax, fig, max_rad=-1, colorbars=["orange", "aqu
     if len(ax)!=2:
         print(f"ERROR: len(ax) should be 2 but it is {len(ax)}")
         raise ValueError
-
-    lw_S, lw_X = 100/len(S_barcode), 100/len(X_barcode)
+    
     for idx, bar in enumerate(S_barcode):
         ax[0].add_patch(mpl.patches.Rectangle([bar[0], idx-0.2], (bar[1]-bar[0]), 0.4, color=colorbars[0], zorder=1))
     for idx, bar in enumerate(X_barcode):
@@ -168,7 +167,6 @@ def plot_from_block_function(S_barcode, X_barcode, block_function, fig, ax, max_
         print(f"ERROR: len(ax) should be 2 but it is {len(ax)}")
         raise ValueError
 
-    lw_S, lw_X = 100/len(S_barcode), 100/len(X_barcode)
     for idx, bar in enumerate(S_barcode):
         ax[0].add_patch(mpl.patches.Rectangle([bar[0], idx-0.2], (bar[1]-bar[0]), 0.4, color=colorbars[0], zorder=1))
     for idx, bar in enumerate(X_barcode):
@@ -468,11 +466,13 @@ def circle(r, n):
 
 import gudhi
 
-def plot_cycle(Z, cycle_edges, ax, color="red", linewidth="5"):
+def plot_cycle(Z, cycle_edges, ax, color="red", linewidth="5", label=None, dashes=None):
     cycle_edges = list(cycle_edges)
     while (len(cycle_edges)>0):
         edge = Z[[cycle_edges.pop(), cycle_edges.pop()]]
-        ax.plot(edge[:,0], edge[:,1], c=color, linewidth=linewidth, zorder=1)
+        line, = ax.plot(edge[:,0], edge[:,1], c=color, linewidth=linewidth, zorder=1, label=label)
+        if dashes!= None:
+            line.set_dashes(dashes)
     # end while
 # end def
 
