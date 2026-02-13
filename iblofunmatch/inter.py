@@ -8,14 +8,14 @@ import itertools
 
 # Read executable path from cmake-generated file 
 parent_dir = Path(os.path.realpath(__file__)).parent.parent
-exe_path = os.path.join(parent_dir, "exe_path_.txt")
+exe_path = os.path.join(parent_dir, "exe_path_Debug.txt")
 with open(exe_path) as f:
     EXECUTABLE_PATH = f.readline()
 
 print(f"EXECUTABLE_PATH: {EXECUTABLE_PATH}")
 
-attributes = ["X_barcode", "S_barcode", "X_reps", "S_reps", "S_reps_im", "pm_matrix", "induced_matching", "matching_strengths", "block_function"]
-types_list = ["float", "float", "int", "int", "int", "int", "int", "float", "int"]
+attributes = ["X_barcode", "S_barcode", "X_reps", "S_reps", "S_reps_im", "pm_matrix", "induced_matching", "block_function"]
+types_list = ["float", "float", "int", "int", "int", "int", "int", "int"]
 
 def get_IBloFunMatch_subset(Dist_S, Dist_X, idS, output_dir, max_rad=-1, num_it=1, store_0_pm=False, points=False, max_dim=2):
     # Buffer files to write subsets and classes for communicating with C++ program 
@@ -61,11 +61,7 @@ def get_IBloFunMatch_subset(Dist_S, Dist_X, idS, output_dir, max_rad=-1, num_it=
             attribute_name = attribute + "_" + str(dim)
             with open(output_dir + "/" + attribute_name + ".out") as file:
                 for line in file:
-                    if(attribute=="matching_strengths"):
-                        data_line = line.split(" ")[:-1]
-                        data_read = list(np.array(data_line).astype(typename))
-                        break
-                    elif(attribute == "induced_matching"):
+                    if(attribute == "induced_matching"):
                         data_read.append(int(line))
                     elif(attribute == "block_function"):
                         data_read.append(int(line))
@@ -89,7 +85,7 @@ def get_IBloFunMatch_subset(Dist_S, Dist_X, idS, output_dir, max_rad=-1, num_it=
     return output_data
 # def get_IBloFunMatch_subset
 
-def plot_matching(IBloFunMatch_o, ax, fig, max_rad=-1, colorbars=["orange", "aquamarine", "red", "yellow"], frame_on=False, print_matching=False, dim=1, strengths=True, block_function=False, codomain_int=[], repeated_codomain=[]):
+def plot_matching(IBloFunMatch_o, ax, fig, max_rad=-1, colorbars=["orange", "aquamarine", "red", "yellow"], frame_on=False, print_matching=False, dim=1, block_function=False, codomain_int=[], repeated_codomain=[]):
     if block_function:
         strengths=False
     X_barcode = IBloFunMatch_o[f"X_barcode_{dim}"]
@@ -100,7 +96,6 @@ def plot_matching(IBloFunMatch_o, ax, fig, max_rad=-1, colorbars=["orange", "aqu
     else:
         matching = IBloFunMatch_o[f"induced_matching_{dim}"]
     
-    matching_strengths = IBloFunMatch_o[f"matching_strengths_{dim}"]
         
     if len(ax)!=2:
         print(f"ERROR: len(ax) should be 2 but it is {len(ax)}")
@@ -136,21 +131,17 @@ def plot_matching(IBloFunMatch_o, ax, fig, max_rad=-1, colorbars=["orange", "aqu
             continue
         S_bar = S_barcode[idx]
         X_bar = X_barcode[idx_match]
-        strength = matching_strengths[idx]
         if X_bar[1]<S_bar[0]:
             continue
         if print_matching:
-            print(f"{S_bar} <--> {X_bar}, strength: {strength:.3f}")
+            print(f"{S_bar} <--> {X_bar}")
         # Highlight matched bar sections 
         ax[0].add_patch(mpl.patches.Rectangle([S_bar[0], idx-0.2], (X_bar[1]-S_bar[0]), 0.4, color="navy", zorder=2))
         ax[1].add_patch(mpl.patches.Rectangle([S_bar[0], idx_match-0.2], (X_bar[1]-S_bar[0]), 0.4, color="navy", zorder=2))
         # Plot matchings
         pt_S = [S_bar[1], idx]
         pt_X = [X_bar[0], idx_match]
-        if strengths:
-            alpha = strength/X_bar[1]
-        else:
-            alpha = 0.7
+        alpha = 0.7
         con = mpl.patches.ConnectionPatch(
             xyA=pt_S, coordsA=ax[0].transData, 
             xyB=pt_X, coordsB=ax[1].transData,
