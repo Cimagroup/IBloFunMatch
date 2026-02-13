@@ -2,7 +2,7 @@
 name = "iblofunmatch"
 version = "0.0.1"
 dependencies = [
-    "numpy", "matplotlib", "jupyter notebook"
+    "numpy", "matplotlib", "scipy", "gudhi"
 ]
 [tool.setuptools.packages.find]
 # All the following settings are optional:
