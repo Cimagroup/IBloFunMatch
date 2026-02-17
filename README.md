@@ -5,9 +5,15 @@ Installation instructions:
 Basic Requirements
 ------------------
 - Have a C++ compiler installed (e.g. GNU compiler)
-- Have Python installed with numpy, matplotlib,...
+- Have Python installed (version >=3.10)
 - Make sure you have already installed:
   CGAL, mpfr, gmp and boost
+- Required python packages:
+    - scipy (>=1.15),
+    - gudhi (>=3.11),
+    - tqdm (>=4.67),
+    - numpy (>=2.2),
+    - matplotlib (>=3.10)
 
 Build IBloFunMatch
 ------------------
