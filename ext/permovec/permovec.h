@@ -32,8 +32,8 @@
 // BOOST handling types between PHAT and BOOST
 #include <boost/numeric/conversion/cast.hpp>
 
-// Ignore bars of length < _tolerance
-const double _tolerance=1e-12;
+// Ignore bars of length < tolerance
+constexpr double tolerance=1e-12;
 // GUDHI types
 using Simplex_tree_options = Gudhi::Simplex_tree_options_full_featured;
 using Simplex_tree = Gudhi::Simplex_tree<Simplex_tree_options>;
@@ -378,7 +378,7 @@ void barcodes_and_reps_dim(
         Filtration_value birth = stree.filtration(pos_spx);
         Filtration_value death = stree.filtration(neg_spx);
         int dim = stree.dimension(pos_spx);
-        if (abs(death-birth)>_tolerance) {
+        if (std::abs(death-birth) > tolerance) {
             Phat_idx_pair new_bar{pos_idx, neg_idx};
             ph_pairs_dim[dim].push_back(new_bar);
             // store column idx containing cycle representative (by Phat_index expression)
