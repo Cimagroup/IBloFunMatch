@@ -20,9 +20,12 @@ out
 .
 
 # Output files and images 
+*/output/*
 *.png
 *.svg
 *.out
+*massif.out
+*massif.txt
 
 # Notebook files 
 *.ipynb_checkpoints
